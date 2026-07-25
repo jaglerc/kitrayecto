@@ -1,4 +1,4 @@
-import { pool } from "../../database/database.js"; 
+import { pool } from "../../database/database.js";
 import type { User } from "./auth.types.js";
 
 export class AuthRepository {
