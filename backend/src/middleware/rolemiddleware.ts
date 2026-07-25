@@ -26,4 +26,3 @@ export const RoleMiddleware = (...rolesPermitidos: UserRole[]) =>
 
         next();
     }
-
