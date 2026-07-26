@@ -21,7 +21,7 @@ export class AuthService {
         const isValidPassword = await bcrypt.compare(password, user.password);
 
         if (!isValidPassword) {
-            throw new Error("Contraseña invalida");
+            throw new Error("ContraseÃ±a invalida");
         }
 
         const jwtSecret = process.env.JWT_SECRET;
