@@ -23,7 +23,7 @@ export const AuthMiddleware = async (
 
     if (!authorization?.startsWith("Bearer ")) {
         res.status(401).json({
-            message: 'Debes iniciar sesión'
+            message: 'Debes iniciar sesiÃ³n'
         });
 
         return;

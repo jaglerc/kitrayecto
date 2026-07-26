@@ -19,7 +19,7 @@ export const RoleMiddleware = (...rolesPermitidos: UserRole[]) =>
 
         if (!rolesPermitidos.includes(user.role)) {
             res.status(403).json({
-                message: "No tiene permisos para realiza esta acción"
+                message: "No tiene permisos para realiza esta acciÃ³n"
             });
             return;
         }

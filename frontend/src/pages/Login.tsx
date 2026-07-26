@@ -1,0 +1,154 @@
+import { useState, type FormEvent } from "react";
+
+import Input from "../components/ui/Input";
+import { Button } from "../components/ui/Button";
+import { authService } from "../services/auth.service";
+
+export default function Login() {
+    const [cedula, setCedula] = useState("");
+    const [password, setPassword] = useState("");
+    const [cargando, setCargando] = useState(false);
+    const [mensajeError, setMensajeError] = useState("");
+
+    const iniciarSesion = (
+        event: FormEvent<HTMLFormElement>
+    ) => {
+        event.preventDefault();
+
+        setMensajeError("");
+
+        if (!cedula.trim()) {
+            setMensajeError("Ingresa tu cédula.");
+            return;
+        }
+
+        if (!password.trim()) {
+            setMensajeError("Ingresa tu contraseña.");
+            return;
+        }
+
+        setCargando(true);
+
+        authService
+            .login({
+                cedula,
+                password,
+            })
+            .then((respuesta) => {
+                console.log(
+                    "Respuesta del backend:",
+                    respuesta
+                );
+
+                localStorage.setItem(
+                    "token",
+                    respuesta.token
+                );
+
+                console.log(
+                    "Usuario autenticado:",
+                    respuesta.user
+                );
+            })
+            .catch((error: unknown) => {
+                if (error instanceof Error) {
+                    setMensajeError(error.message);
+                } else {
+                    setMensajeError(
+                        "Ocurrió un error al iniciar sesión."
+                    );
+                }
+            })
+            .finally(() => {
+                setCargando(false);
+            });
+    };
+
+    return (
+        <main
+            className="flex min-h-dvh items-center justify-center bg-gray-100 px-4 py-6"
+        >
+            <form
+                onSubmit={iniciarSesion}
+                acceptCharset="UTF-8"
+                className="
+                    w-full
+                    max-w-md
+                    rounded-2xl
+                    bg-white
+                    p-8
+                    shadow-lg
+                "
+            >
+                <img
+                    src="/ruta-aviario.png"
+                    alt="Ruta Aviario"
+                    className="
+                        mx-auto
+                        mb-8
+                        h-auto
+                        w-64
+                        object-contain
+                    "
+                />
+                <div className="mb-6 text-center">
+                    <h1 className="text-xl font-bold text-gray-700">
+                        ¡Bienvenido de nuevo!
+                    </h1>
+
+                    <p className="mt-1 text-sm text-gray-400">
+                        Inicia sesión para continuar
+                    </p>
+                </div>
+
+                <div className="mx-auto w-full max-w-sm space-y-4">
+                    <Input
+                        value={cedula}
+                        onChange={(value) => {
+                            setCedula(value);
+                            setMensajeError("");
+                        }}
+                        type="text"
+                        placeholder="Cédula"
+                        disabled={cargando}
+                    />
+
+                    <Input
+                        value={password}
+                        onChange={(value) => {
+                            setPassword(value);
+                            setMensajeError("");
+                        }}
+                        type="password"
+                        placeholder="Contraseña"
+                        disabled={cargando}
+                    />
+
+                    {mensajeError && (
+                        <p className="text-sm text-red-500">
+                            {mensajeError}
+                        </p>
+                    )}
+
+                    <Button
+                        type="submit"
+                        disabled={cargando}
+                        className="
+                            h-14
+                            w-full
+                            bg-amber-400
+                            text-gray-700
+                            hover:bg-amber-500
+                            disabled:cursor-not-allowed
+                            disabled:opacity-60
+                        "
+                    >
+                        {cargando
+                            ? "Iniciando sesión..."
+                            : "Iniciar sesión"}
+                    </Button>
+                </div>
+            </form>
+        </main>
+    );
+}
