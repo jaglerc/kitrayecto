@@ -40,7 +40,9 @@ export const AuthMiddleware = async (
         const secretKey = new TextEncoder().encode(jwtSecret);
         const { payload } = await jwtVerify(token, secretKey, { algorithms: ["HS256"] });
 
-        if (typeof payload.sub !== "number" || !isUserRole(payload.role)) {
+        const userId = Number(payload.sub);
+
+        if (!Number.isInteger(userId) || userId <= 0 || !isUserRole(payload.role)) {
             res.status(401).json({
                 message: 'El token no contiene datos validos'
             })
@@ -48,7 +50,7 @@ export const AuthMiddleware = async (
         }
 
         const authenticatedUser: AuthenticatedUser = {
-            id: payload.sub,
+            id: userId,
             role: payload.role
         };
 

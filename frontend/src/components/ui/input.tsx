@@ -6,6 +6,8 @@ interface InputProps {
 
     type?: string;
     placeholder?: string;
+    autoComplete?: string;
+    inputMode?: "none" | "text" | "tel" | "url" | "email" | "numeric" | "decimal" | "search";
 
     leftIcon?: ReactNode;
     rightIcon?: ReactNode;
@@ -20,6 +22,8 @@ export default function Input({
     onChange,
     type = "text",
     placeholder,
+    autoComplete,
+    inputMode,
     leftIcon,
     rightIcon,
     onRightIconClick,
@@ -38,6 +42,8 @@ export default function Input({
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder={placeholder}
+                autoComplete={autoComplete}
+                inputMode={inputMode}
                 disabled={disabled}
                 className={`
                     w-full
