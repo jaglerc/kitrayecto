@@ -9,13 +9,15 @@ export default function Login() {
     const [password, setPassword] = useState("");
     const [cargando, setCargando] = useState(false);
     const [mensajeError, setMensajeError] = useState("");
+    const [mensajeExito, setMensajeExito] = useState("");
 
     const iniciarSesion = (
-        event: FormEvent<HTMLFormElement>
+        event: SubmitEvent
     ) => {
         event.preventDefault();
 
         setMensajeError("");
+        setMensajeExito("");
 
         if (!cedula.trim()) {
             setMensajeError("Ingresa tu cédula.");
@@ -44,10 +46,13 @@ export default function Login() {
                     "token",
                     respuesta.token
                 );
+                localStorage.setItem(
+                    "user",
+                    JSON.stringify(respuesta.user)
+                );
 
-                console.log(
-                    "Usuario autenticado:",
-                    respuesta.user
+                setMensajeExito(
+                    `Sesión iniciada correctamente. Bienvenido, ${respuesta.user.nombre}.`
                 );
             })
             .catch((error: unknown) => {
@@ -104,22 +109,25 @@ export default function Login() {
                 <div className="mx-auto w-full max-w-sm space-y-4">
                     <Input
                         value={cedula}
-                        onChange={(value) => {
+                        onChange={(value: string) => {
                             setCedula(value);
                             setMensajeError("");
                         }}
                         type="text"
+                        inputMode="numeric"
+                        autoComplete="username"
                         placeholder="Cédula"
                         disabled={cargando}
                     />
 
                     <Input
                         value={password}
-                        onChange={(value) => {
+                        onChange={(value: string) => {
                             setPassword(value);
                             setMensajeError("");
                         }}
                         type="password"
+                        autoComplete="current-password"
                         placeholder="Contraseña"
                         disabled={cargando}
                     />
@@ -127,6 +135,12 @@ export default function Login() {
                     {mensajeError && (
                         <p className="text-sm text-red-500">
                             {mensajeError}
+                        </p>
+                    )}
+
+                    {mensajeExito && (
+                        <p className="text-sm text-green-600">
+                            {mensajeExito}
                         </p>
                     )}
 
