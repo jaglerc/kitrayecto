@@ -15,7 +15,7 @@ export class AuthRepository {
                 cedula,
                 password,
                 role
-            FROM usuarios
+            FROM usuario
             WHERE cedula = $1
             LIMIT 1
             `,
