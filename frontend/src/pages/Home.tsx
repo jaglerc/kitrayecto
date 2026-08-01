@@ -13,6 +13,8 @@ export default function Home() {
 
     const usuario: UsuarioGuardado | null = usuarioGuardado ?JSON.parse(usuarioGuardado) : null;
 
+    if (!usuario) return null;
+
     return (
         <div>
             <Header nombre={usuario.nombre} role={usuario.role} />
