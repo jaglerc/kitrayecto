@@ -74,30 +74,17 @@ export default function Login() {
 
     return (
         <main
-            className="flex min-h-dvh items-center justify-center bg-gray-100 px-4 py-6"
+            className="flex min-h-dvh items-center justify-center bg-white px-4 py-6"
         >
             <form
                 onSubmit={iniciarSesion}
                 acceptCharset="UTF-8"
-                className="
-                    w-full
-                    max-w-md
-                    rounded-2xl
-                    bg-white
-                    p-8
-                    shadow-lg
-                "
+                className="w-full max-w-md bg-white p-8 sm:border sm:rounded-2xl sm:border-gray-200 sm:shadow-lg"
             >
                 <img
                     src="/ruta-aviario.png"
                     alt="Ruta Aviario"
-                    className="
-                        mx-auto
-                        mb-8
-                        h-auto
-                        w-64
-                        object-contain
-                    "
+                    className="-translate-y-24 mx-auto -mb-30 h-auto w-80 object-contain"
                 />
 
                 <div className="mb-6 text-center">
