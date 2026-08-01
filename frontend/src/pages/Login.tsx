@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from "react";
-
-import Input from "../components/ui/input"
+import { useNavigate } from "react-router";
+import Input from "../components/ui/input";
 import { Button } from "../components/ui/Button";
 import { authService } from "../services/auth.service";
 
 export default function Login() {
+    const navigate = useNavigate();
     const [cedula, setCedula] = useState("");
     const [password, setPassword] = useState("");
     const [cargando, setCargando] = useState(false);
@@ -52,9 +53,9 @@ export default function Login() {
                     JSON.stringify(respuesta.user)
                 );
 
-                setMensajeExito(
-                    `Sesión iniciada correctamente. Bienvenido, ${respuesta.user.nombre}.`
-                );
+                navigate("/home", {
+                    replace: true,
+                });
             })
             .catch((error: unknown) => {
                 if (error instanceof Error) {
@@ -72,20 +73,35 @@ export default function Login() {
     };
 
     return (
-        <main className="flex min-h-dvh items-center justify-center bg-gray-100 px-4 py-6">
+        <main
+            className="flex min-h-dvh items-center justify-center bg-gray-100 px-4 py-6"
+        >
             <form
                 onSubmit={iniciarSesion}
                 acceptCharset="UTF-8"
-                className="w-full max-w-md rounded-2xl bg-white p-8 shadow-lg"
+                className="
+                    w-full
+                    max-w-md
+                    rounded-2xl
+                    bg-white
+                    p-8
+                    shadow-lg
+                "
             >
                 <img
                     src="/ruta-aviario.png"
                     alt="Ruta Aviario"
-                    className="mx-auto mb-8 h-auto w-64 object-contain"
+                    className="
+                        mx-auto
+                        mb-8
+                        h-auto
+                        w-64
+                        object-contain
+                    "
                 />
 
                 <div className="mb-6 text-center">
-                    <h1 className="text-xl font-bold text-gray-700">
+                    <h1 className="text-[30px] font-bold text-gray-700">
                         ¡Bienvenido de nuevo!
                     </h1>
 
