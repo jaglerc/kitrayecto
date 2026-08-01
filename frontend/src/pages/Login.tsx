@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 
-import Input from "../components/ui/Input";
+import Input from "../components/ui/input"
 import { Button } from "../components/ui/Button";
 import { authService } from "../services/auth.service";
 
@@ -13,7 +13,7 @@ export default function Login() {
 
     const iniciarSesion = (
         event: FormEvent<HTMLFormElement>
-    ) => {
+    ): void => {
         event.preventDefault();
 
         setMensajeError("");
@@ -24,7 +24,7 @@ export default function Login() {
             return;
         }
 
-        if (!password.trim()) {
+        if (!password) {
             setMensajeError("Ingresa tu contraseña.");
             return;
         }
@@ -33,7 +33,7 @@ export default function Login() {
 
         authService
             .login({
-                cedula,
+                cedula: cedula.trim(),
                 password,
             })
             .then((respuesta) => {
@@ -46,6 +46,7 @@ export default function Login() {
                     "token",
                     respuesta.token
                 );
+
                 localStorage.setItem(
                     "user",
                     JSON.stringify(respuesta.user)
@@ -58,11 +59,12 @@ export default function Login() {
             .catch((error: unknown) => {
                 if (error instanceof Error) {
                     setMensajeError(error.message);
-                } else {
-                    setMensajeError(
-                        "Ocurrió un error al iniciar sesión."
-                    );
+                    return;
                 }
+
+                setMensajeError(
+                    "Ocurrió un error al iniciar sesión."
+                );
             })
             .finally(() => {
                 setCargando(false);
@@ -70,32 +72,18 @@ export default function Login() {
     };
 
     return (
-        <main
-            className="flex min-h-dvh items-center justify-center bg-gray-100 px-4 py-6"
-        >
+        <main className="flex min-h-dvh items-center justify-center bg-gray-100 px-4 py-6">
             <form
                 onSubmit={iniciarSesion}
                 acceptCharset="UTF-8"
-                className="
-                    w-full
-                    max-w-md
-                    rounded-2xl
-                    bg-white
-                    p-8
-                    shadow-lg
-                "
+                className="w-full max-w-md rounded-2xl bg-white p-8 shadow-lg"
             >
                 <img
                     src="/ruta-aviario.png"
                     alt="Ruta Aviario"
-                    className="
-                        mx-auto
-                        mb-8
-                        h-auto
-                        w-64
-                        object-contain
-                    "
+                    className="mx-auto mb-8 h-auto w-64 object-contain"
                 />
+
                 <div className="mb-6 text-center">
                     <h1 className="text-xl font-bold text-gray-700">
                         ¡Bienvenido de nuevo!
@@ -109,9 +97,10 @@ export default function Login() {
                 <div className="mx-auto w-full max-w-sm space-y-4">
                     <Input
                         value={cedula}
-                        onChange={(value) => {
+                        onChange={(value: string) => {
                             setCedula(value);
                             setMensajeError("");
+                            setMensajeExito("");
                         }}
                         type="text"
                         inputMode="numeric"
@@ -122,9 +111,10 @@ export default function Login() {
 
                     <Input
                         value={password}
-                        onChange={(value) => {
+                        onChange={(value: string) => {
                             setPassword(value);
                             setMensajeError("");
+                            setMensajeExito("");
                         }}
                         type="password"
                         autoComplete="current-password"
@@ -133,13 +123,19 @@ export default function Login() {
                     />
 
                     {mensajeError && (
-                        <p className="text-sm text-red-500">
+                        <p
+                            role="alert"
+                            className="text-sm text-red-500"
+                        >
                             {mensajeError}
                         </p>
                     )}
 
                     {mensajeExito && (
-                        <p className="text-sm text-green-600">
+                        <p
+                            role="status"
+                            className="text-sm text-green-600"
+                        >
                             {mensajeExito}
                         </p>
                     )}
@@ -147,15 +143,7 @@ export default function Login() {
                     <Button
                         type="submit"
                         disabled={cargando}
-                        className="
-                            h-14
-                            w-full
-                            bg-amber-400
-                            text-gray-700
-                            hover:bg-amber-500
-                            disabled:cursor-not-allowed
-                            disabled:opacity-60
-                        "
+                        className="h-14 w-full bg-amber-400 text-gray-700 hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                         {cargando
                             ? "Iniciando sesión..."
