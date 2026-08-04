@@ -101,7 +101,7 @@ export class InspectionsRepository {
         evidence: CreateInspectionEvidence
     ): Promise<void> {
         await client.query(
-            `INSERT INTO evidencias_inspecciones
+            `INSERT INTO evidencia_respuestas
                 (respuesta_inspeccion_id, object_key, mime_type, size_bytes)
              VALUES ($1, $2, $3, $4)`,
             [answerId, evidence.objectKey, evidence.contentType, evidence.size]
