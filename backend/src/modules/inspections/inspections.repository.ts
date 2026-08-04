@@ -1,6 +1,6 @@
 import type { PoolClient } from "pg";
 import { pool } from "../../database/database.js";
-import type { CreateInspectionAnswer, CreatedInspection, InspectionOperation, InspectionStatus } from "./inspections.types.js";
+import type { CreateInspectionAnswer, CreateInspectionEvidence, CreatedInspection, InspectionOperation, InspectionStatus } from "./inspections.types.js";
 
 interface VehicleRecord { id: number; tipo_vehiculo: string; }
 interface TemplateRecord { id: number; titulo: string; }
@@ -47,12 +47,16 @@ export class InspectionsRepository {
             }
 
             for (const answer of answers) {
-                await this.insertAnswer(
+                const answerId = await this.insertAnswer(
                     client,
                     inspection.id,
                     templatesById.get(answer.templateId)!.titulo,
                     answer
                 );
+
+                for (const evidence of answer.evidences) {
+                    await this.insertEvidence(client, answerId, evidence);
+                }
             }
 
             await client.query("COMMIT");
@@ -74,12 +78,33 @@ export class InspectionsRepository {
         inspectionId: number,
         title: string,
         answer: CreateInspectionAnswer
-    ): Promise<void> {
-        await client.query(
+    ): Promise<number> {
+        const result = await client.query<{ id: number }>(
             `INSERT INTO respuesta_inspecciones
                 (inspeccion_id, titulo, estado, observacion)
-             VALUES ($1, $2, $3, $4)`,
+             VALUES ($1, $2, $3, $4)
+             RETURNING id`,
             [inspectionId, title, answer.status, answer.observation || null]
+        );
+
+        const insertedAnswer = result.rows[0];
+        if (!insertedAnswer) {
+            throw new Error("La base de datos no devolvió la respuesta creada");
+        }
+
+        return insertedAnswer.id;
+    }
+
+    private static async insertEvidence(
+        client: PoolClient,
+        answerId: number,
+        evidence: CreateInspectionEvidence
+    ): Promise<void> {
+        await client.query(
+            `INSERT INTO evidencias_inspecciones
+                (respuesta_inspeccion_id, object_key, mime_type, size_bytes)
+             VALUES ($1, $2, $3, $4)`,
+            [answerId, evidence.objectKey, evidence.contentType, evidence.size]
         );
     }
 }

@@ -12,12 +12,30 @@ export type InspectionStatus = "Sin novedad" | "Con novedad" | "Crítica";
 export interface InspectionAnswer {
     status: InspectionStatus;
     observation: string;
+    evidenceFiles: InspectionEvidenceFile[];
 }
 
-interface CreateInspectionRequest {
+export interface InspectionEvidenceFile {
+    id: string;
+    file: File;
+    previewUrl: string;
+}
+
+export interface UploadedInspectionEvidence {
+    objectKey: string;
+    contentType: string;
+    size: number;
+}
+
+export interface CreateInspectionRequest {
     vehicleId: number;
     operation: "Check_in" | "Check_out";
-    answers: Array<InspectionAnswer & { templateId: number }>;
+    answers: Array<{
+        templateId: number;
+        status: InspectionStatus;
+        observation: string;
+        evidences: UploadedInspectionEvidence[];
+    }>;
 }
 
 export interface CreatedInspection {

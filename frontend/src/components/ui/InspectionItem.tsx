@@ -12,6 +12,8 @@ import safetyIcon from "../../icons/inspection-safety.svg";
 import tiresIcon from "../../icons/inspection-tires.svg";
 import windowsIcon from "../../icons/inspection-windows.svg";
 import checklistItemIcon from "../../icons/to-do-list.png";
+import cameraIcon from "../../icons/camera.svg";
+import galleryIcon from "../../icons/gallery.svg";
 
 import type {
     InspectionAnswer,
@@ -85,12 +87,57 @@ export default function InspectionItem({
         answer?.status === "Crítica";
 
     const selectStatus = (status: InspectionStatus) => {
+        if (status === "Sin novedad") {
+            answer?.evidenceFiles.forEach((evidence) => {
+                URL.revokeObjectURL(evidence.previewUrl);
+            });
+        }
+
         onChange({
             status,
             observation:
                 status === "Sin novedad"
                     ? ""
                     : answer?.observation ?? "",
+            evidenceFiles:
+                status === "Sin novedad"
+                    ? []
+                    : answer?.evidenceFiles ?? [],
+        });
+    };
+
+    const addEvidenceFiles = (files: FileList | null) => {
+        if (!files || !answer) return;
+
+        const availableSlots = 3 - answer.evidenceFiles.length;
+        const selectedFiles = Array.from(files)
+            .filter((file) => file.type.startsWith("image/"))
+            .slice(0, availableSlots)
+            .map((file) => ({
+                id: crypto.randomUUID(),
+                file,
+                previewUrl: URL.createObjectURL(file),
+            }));
+
+        onChange({
+            ...answer,
+            evidenceFiles: [...answer.evidenceFiles, ...selectedFiles],
+        });
+    };
+
+    const removeEvidence = (evidenceId: string) => {
+        if (!answer) return;
+
+        const evidence = answer.evidenceFiles.find(
+            (item) => item.id === evidenceId
+        );
+        if (evidence) URL.revokeObjectURL(evidence.previewUrl);
+
+        onChange({
+            ...answer,
+            evidenceFiles: answer.evidenceFiles.filter(
+                (item) => item.id !== evidenceId
+            ),
         });
     };
 
@@ -183,6 +230,82 @@ export default function InspectionItem({
                     <p className="text-right text-[9px] text-gray-400">
                         {answer.observation.length}/300
                     </p>
+
+                    <div className="mt-2">
+                        <p className="text-[10px] font-semibold text-gray-700">
+                            {answer.status === "Crítica"
+                                ? "Adjuntar evidencia obligatoria"
+                                : "Adjuntar evidencia"}
+                        </p>
+
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                            <label
+                                htmlFor={`camera-${template.id}`}
+                                className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-[10px] font-medium text-gray-700"
+                            >
+                                <img src={cameraIcon} alt="" className="h-4 w-4" />
+                                Tomar foto
+                            </label>
+                            <input
+                                id={`camera-${template.id}`}
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                capture="environment"
+                                className="sr-only"
+                                disabled={answer.evidenceFiles.length >= 3}
+                                onChange={(event) => {
+                                    addEvidenceFiles(event.target.files);
+                                    event.target.value = "";
+                                }}
+                            />
+
+                            <label
+                                htmlFor={`gallery-${template.id}`}
+                                className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-[10px] font-medium text-gray-700"
+                            >
+                                <img src={galleryIcon} alt="" className="h-4 w-4" />
+                                Galería
+                            </label>
+                            <input
+                                id={`gallery-${template.id}`}
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                multiple
+                                className="sr-only"
+                                disabled={answer.evidenceFiles.length >= 3}
+                                onChange={(event) => {
+                                    addEvidenceFiles(event.target.files);
+                                    event.target.value = "";
+                                }}
+                            />
+                        </div>
+
+                        {answer.evidenceFiles.length > 0 && (
+                            <div className="mt-2 grid grid-cols-3 gap-2">
+                                {answer.evidenceFiles.map((evidence) => (
+                                    <div key={evidence.id} className="relative overflow-hidden rounded-lg border border-gray-200">
+                                        <img
+                                            src={evidence.previewUrl}
+                                            alt="Vista previa de evidencia"
+                                            className="h-20 w-full object-cover"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => removeEvidence(evidence.id)}
+                                            aria-label="Eliminar evidencia"
+                                            className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-xs text-white"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <p className="mt-1 text-right text-[9px] text-gray-400">
+                            {answer.evidenceFiles.length}/3 imágenes
+                        </p>
+                    </div>
                 </div>
             )}
         </article>
