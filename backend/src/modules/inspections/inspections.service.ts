@@ -44,6 +44,35 @@ export class InspectionsService {
             if (answer.observation.length > 300) {
                 throw new InspectionValidationError("Las observaciones no pueden superar 300 caracteres");
             }
+
+            if (!Array.isArray(answer.evidences) || answer.evidences.length > 3) {
+                throw new InspectionValidationError(
+                    "Cada elemento puede tener hasta tres evidencias"
+                );
+            }
+            if (answer.status === "Crítica" && answer.evidences.length === 0) {
+                throw new InspectionValidationError(
+                    "Los elementos críticos requieren al menos una evidencia"
+                );
+            }
+
+            const storagePrefix = (process.env.S3_UPLOAD_PREFIX ?? "archivos")
+                .replace(/^\/+|\/+$/g, "");
+            const expectedEvidencePrefix = `${storagePrefix}/inspecciones/${input.vehicleId}/${conductorId}/`;
+            for (const evidence of answer.evidences) {
+                if (
+                    typeof evidence.objectKey !== "string" ||
+                    !evidence.objectKey.startsWith(expectedEvidencePrefix) ||
+                    !["image/jpeg", "image/png", "image/webp"].includes(evidence.contentType) ||
+                    !Number.isInteger(evidence.size) ||
+                    evidence.size <= 0 ||
+                    evidence.size > 2.5 * 1024 * 1024
+                ) {
+                    throw new InspectionValidationError(
+                        "Una de las evidencias no es válida"
+                    );
+                }
+            }
         }
 
         const overallStatus = input.answers.reduce<InspectionStatus>(
