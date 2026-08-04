@@ -2,11 +2,17 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 
 import Footer from "../components/ui/Footer";
+import InspectionChecklistStep from "../components/ui/InspectionChecklistStep";
 import JourneyHeader from "../components/ui/JourneyHeader";
 import PlateSelectionStep from "../components/ui/PlateSelectionStep";
 import Stepper from "../components/ui/Stepper";
 import VehicleTypeStep from "../components/ui/VehicleTypeStep";
 import type { VehicleType } from "../components/ui/VehicleTypeStep";
+import { inspectionService } from "../services/inspection.service";
+import type {
+    InspectionAnswer,
+    InspectionTemplate,
+} from "../services/inspection.service";
 import { vehicleService } from "../services/vehicle.service";
 import type { Vehicle } from "../services/vehicle.service";
 
@@ -27,16 +33,38 @@ export default function StartJourneyPage() {
     const [selectedVehicleId, setSelectedVehicleId] =
         useState<number | null>(null);
 
-    const [isLoading, setIsLoading] =
+    const [templates, setTemplates] =
+        useState<InspectionTemplate[]>([]);
+
+    const [answers, setAnswers] =
+        useState<Record<number, InspectionAnswer>>({});
+
+    const [isLoadingVehicles, setIsLoadingVehicles] =
         useState(false);
 
-    const [error, setError] =
+    const [vehiclesError, setVehiclesError] =
         useState<string | null>(null);
 
+    const [isLoadingTemplates, setIsLoadingTemplates] =
+        useState(false);
+
+    const [templatesError, setTemplatesError] =
+        useState<string | null>(null);
+
+    const selectedVehicle = vehicles.find(
+        (vehicle) => vehicle.id === selectedVehicleId
+    );
+
     const handleBack = () => {
-        if (currentStep > 1) {
+        if (currentStep === 3) {
+            setCurrentStep(2);
+            setTemplatesError(null);
+            return;
+        }
+
+        if (currentStep === 2) {
             setCurrentStep(1);
-            setError(null);
+            setVehiclesError(null);
             return;
         }
 
@@ -47,44 +75,92 @@ export default function StartJourneyPage() {
         if (type !== selectedType) {
             setVehicles([]);
             setSelectedVehicleId(null);
+            setTemplates([]);
+            setAnswers({});
         }
 
         setSelectedType(type);
-        setError(null);
+        setVehiclesError(null);
+        setTemplatesError(null);
     };
 
-    const handleContinue = async () => {
-        if (currentStep === 1) {
-            if (!selectedType) return;
+    const handleSelectVehicle = (vehicleId: number) => {
+        if (vehicleId !== selectedVehicleId) {
+            setTemplates([]);
+            setAnswers({});
+        }
 
-            setCurrentStep(2);
-            setIsLoading(true);
-            setError(null);
+        setSelectedVehicleId(vehicleId);
+        setTemplatesError(null);
+    };
 
-            try {
-                const response = await vehicleService.findByType(
-                    selectedType
-                );
+    const loadVehicles = async (type: VehicleType) => {
+        setCurrentStep(2);
+        setIsLoadingVehicles(true);
+        setVehiclesError(null);
 
-                setVehicles(response);
-            } catch (requestError: unknown) {
-                setVehicles([]);
+        try {
+            const response = await vehicleService.findByType(type);
+            setVehicles(response);
+        } catch (requestError: unknown) {
+            setVehicles([]);
 
-                setError(
-                    requestError instanceof Error
-                        ? requestError.message
-                        : "No fue posible consultar los vehículos"
-                );
-            } finally {
-                setIsLoading(false);
-            }
+            setVehiclesError(
+                requestError instanceof Error
+                    ? requestError.message
+                    : "No fue posible consultar los vehículos"
+            );
+        } finally {
+            setIsLoadingVehicles(false);
+        }
+    };
 
+    const loadTemplates = async (type: VehicleType) => {
+        setCurrentStep(3);
+        setIsLoadingTemplates(true);
+        setTemplatesError(null);
+
+        try {
+            const response =
+                await inspectionService.findTemplatesByVehicleType(type);
+
+            setTemplates(response);
+        } catch (requestError: unknown) {
+            setTemplates([]);
+
+            setTemplatesError(
+                requestError instanceof Error
+                    ? requestError.message
+                    : "No fue posible consultar el checklist"
+            );
+        } finally {
+            setIsLoadingTemplates(false);
+        }
+    };
+
+    const handleContinue = () => {
+        if (currentStep === 1 && selectedType) {
+            void loadVehicles(selectedType);
             return;
         }
 
-        if (currentStep === 2 && selectedVehicleId) {
-            setCurrentStep(3);
+        if (
+            currentStep === 2 &&
+            selectedType &&
+            selectedVehicleId
+        ) {
+            void loadTemplates(selectedType);
         }
+    };
+
+    const handleAnswerChange = (
+        templateId: number,
+        answer: InspectionAnswer
+    ) => {
+        setAnswers((currentAnswers) => ({
+            ...currentAnswers,
+            [templateId]: answer,
+        }));
     };
 
     const canContinue =
@@ -94,8 +170,11 @@ export default function StartJourneyPage() {
                 ? selectedVehicleId !== null
                 : false;
 
+    const isLoading =
+        isLoadingVehicles || isLoadingTemplates;
+
     return (
-        <div>
+        <div className="relative mx-auto min-h-dvh w-full max-w-md bg-white">
             <JourneyHeader
                 title="Iniciar mi jornada"
                 onBack={handleBack}
@@ -116,9 +195,21 @@ export default function StartJourneyPage() {
                         selectedType={selectedType}
                         vehicles={vehicles}
                         selectedVehicleId={selectedVehicleId}
-                        isLoading={isLoading}
-                        error={error}
-                        onSelect={setSelectedVehicleId}
+                        isLoading={isLoadingVehicles}
+                        error={vehiclesError}
+                        onSelect={handleSelectVehicle}
+                    />
+                )}
+
+                {currentStep === 3 && selectedVehicle && (
+                    <InspectionChecklistStep
+                        mode="check-in"
+                        vehicle={selectedVehicle}
+                        templates={templates}
+                        answers={answers}
+                        isLoading={isLoadingTemplates}
+                        error={templatesError}
+                        onAnswerChange={handleAnswerChange}
                     />
                 )}
 
