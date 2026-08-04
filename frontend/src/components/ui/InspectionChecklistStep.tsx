@@ -80,7 +80,7 @@ export default function InspectionChecklistStep({
             )}
 
             {!isLoading && !error && templates.length > 0 && (
-                <div className="max-h-[44dvh] space-y-2 overflow-y-auto overscroll-contain pr-1">
+                <div className="space-y-2">
                     {templates.map((template) => (
                         <InspectionItem
                             key={template.id}
