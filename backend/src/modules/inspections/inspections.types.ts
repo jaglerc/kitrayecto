@@ -6,6 +6,13 @@ export interface CreateInspectionAnswer {
     templateId: number;
     status: InspectionStatus;
     observation: string;
+    evidences: CreateInspectionEvidence[];
+}
+
+export interface CreateInspectionEvidence {
+    objectKey: string;
+    contentType: string;
+    size: number;
 }
 
 export interface CreateInspectionInput {

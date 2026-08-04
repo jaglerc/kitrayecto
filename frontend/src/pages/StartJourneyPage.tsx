@@ -15,6 +15,7 @@ import type {
 } from "../services/inspection.service";
 import { vehicleService } from "../services/vehicle.service";
 import type { Vehicle } from "../services/vehicle.service";
+import { storageService } from "../services/storage.service";
 
 type JourneyStep = 1 | 2 | 3;
 
@@ -178,7 +179,8 @@ export default function StartJourneyPage() {
             const answer = answers[template.id];
             return Boolean(
                 answer &&
-                (answer.status === "Sin novedad" || answer.observation.trim())
+                (answer.status === "Sin novedad" || answer.observation.trim()) &&
+                (answer.status !== "Crítica" || answer.evidenceFiles.length > 0)
             );
         });
 
@@ -188,13 +190,32 @@ export default function StartJourneyPage() {
         setIsSaving(true);
         setSaveError(null);
         try {
+            const uploadedAnswers = await Promise.all(
+                templates.map(async (template) => {
+                    const answer = answers[template.id];
+                    const evidences = await Promise.all(
+                        answer.evidenceFiles.map((evidence) =>
+                            storageService.uploadImage(
+                                evidence.file,
+                                "inspecciones",
+                                selectedVehicleId
+                            )
+                        )
+                    );
+
+                    return {
+                        templateId: template.id,
+                        status: answer.status,
+                        observation: answer.observation,
+                        evidences,
+                    };
+                })
+            );
+
             const inspection = await inspectionService.create({
                 vehicleId: selectedVehicleId,
                 operation: "Check_in",
-                answers: templates.map((template) => ({
-                    templateId: template.id,
-                    ...answers[template.id],
-                })),
+                answers: uploadedAnswers,
             });
             setSavedInspectionId(inspection.id);
         } catch (requestError: unknown) {
