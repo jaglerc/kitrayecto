@@ -224,7 +224,7 @@ export default function StartJourneyPage() {
                 onBack={handleBack}
             />
 
-            <main className="px-4 pb-28">
+            <main className={currentStep === 3 ? "px-4 pb-44" : "px-4 pb-28"}>
                 <Stepper currentStep={currentStep} />
 
                 {currentStep === 1 && (
@@ -270,7 +270,7 @@ export default function StartJourneyPage() {
                 )}
 
                 {currentStep === 3 && !isLoadingTemplates && !templatesError && (
-                    <div className="mt-3 space-y-2">
+                    <div className="fixed bottom-[76px] left-1/2 z-40 w-full max-w-md -translate-x-1/2 space-y-2 border-t border-gray-100 bg-white px-4 py-2 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
                         {saveError && (
                             <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
                                 {saveError}
