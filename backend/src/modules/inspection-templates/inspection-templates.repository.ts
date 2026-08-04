@@ -16,7 +16,7 @@ export class InspectionTemplatesRepository {
                 tipo_vehiculo,
                 titulo,
                 descripcion
-            FROM plantillas_check_in
+            FROM plantillas_check
             WHERE tipo_vehiculo::text = $1
             ORDER BY id
             `,
