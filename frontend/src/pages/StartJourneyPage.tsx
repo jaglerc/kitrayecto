@@ -51,6 +51,10 @@ export default function StartJourneyPage() {
     const [templatesError, setTemplatesError] =
         useState<string | null>(null);
 
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
+    const [savedInspectionId, setSavedInspectionId] = useState<number | null>(null);
+
     const selectedVehicle = vehicles.find(
         (vehicle) => vehicle.id === selectedVehicleId
     );
@@ -82,6 +86,8 @@ export default function StartJourneyPage() {
         setSelectedType(type);
         setVehiclesError(null);
         setTemplatesError(null);
+        setSaveError(null);
+        setSavedInspectionId(null);
     };
 
     const handleSelectVehicle = (vehicleId: number) => {
@@ -92,6 +98,8 @@ export default function StartJourneyPage() {
 
         setSelectedVehicleId(vehicleId);
         setTemplatesError(null);
+        setSaveError(null);
+        setSavedInspectionId(null);
     };
 
     const loadVehicles = async (type: VehicleType) => {
@@ -161,6 +169,43 @@ export default function StartJourneyPage() {
             ...currentAnswers,
             [templateId]: answer,
         }));
+        setSaveError(null);
+    };
+
+    const isChecklistComplete =
+        templates.length > 0 &&
+        templates.every((template) => {
+            const answer = answers[template.id];
+            return Boolean(
+                answer &&
+                (answer.status === "Sin novedad" || answer.observation.trim())
+            );
+        });
+
+    const saveChecklist = async () => {
+        if (!selectedVehicleId || !isChecklistComplete || isSaving) return;
+
+        setIsSaving(true);
+        setSaveError(null);
+        try {
+            const inspection = await inspectionService.create({
+                vehicleId: selectedVehicleId,
+                operation: "Check_in",
+                answers: templates.map((template) => ({
+                    templateId: template.id,
+                    ...answers[template.id],
+                })),
+            });
+            setSavedInspectionId(inspection.id);
+        } catch (requestError: unknown) {
+            setSaveError(
+                requestError instanceof Error
+                    ? requestError.message
+                    : "No fue posible registrar el checklist"
+            );
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const canContinue =
@@ -170,8 +215,7 @@ export default function StartJourneyPage() {
                 ? selectedVehicleId !== null
                 : false;
 
-    const isLoading =
-        isLoadingVehicles || isLoadingTemplates;
+    const isLoading = isLoadingVehicles || isLoadingTemplates || isSaving;
 
     return (
         <div className="relative mx-auto min-h-dvh w-full max-w-md bg-white">
@@ -223,6 +267,38 @@ export default function StartJourneyPage() {
                         Continuar
                         <span aria-hidden="true">→</span>
                     </button>
+                )}
+
+                {currentStep === 3 && !isLoadingTemplates && !templatesError && (
+                    <div className="mt-3 space-y-2">
+                        {saveError && (
+                            <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+                                {saveError}
+                            </p>
+                        )}
+
+                        {savedInspectionId ? (
+                            <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-center text-sm font-medium text-green-700">
+                                Checklist #{savedInspectionId} registrado correctamente.
+                            </div>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={() => void saveChecklist()}
+                                disabled={!isChecklistComplete || isSaving}
+                                className="flex w-full items-center justify-center gap-3 rounded-lg bg-amber-400 px-4 py-3 text-sm font-semibold text-gray-900 transition-colors hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                {isSaving ? "Registrando..." : "Registrar checklist"}
+                                {!isSaving && <span aria-hidden="true">→</span>}
+                            </button>
+                        )}
+
+                        {!savedInspectionId && !isChecklistComplete && templates.length > 0 && (
+                            <p className="text-center text-xs text-gray-500">
+                                Responde todos los elementos y describe las novedades para continuar.
+                            </p>
+                        )}
+                    </div>
                 )}
             </main>
 
