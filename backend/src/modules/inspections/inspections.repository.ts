@@ -76,7 +76,7 @@ export class InspectionsRepository {
         answer: CreateInspectionAnswer
     ): Promise<void> {
         await client.query(
-            `INSERT INTO respuestas_inspecciones
+            `INSERT INTO respuesta_inspecciones
                 (inspeccion_id, titulo, estado, observacion)
              VALUES ($1, $2, $3, $4)`,
             [inspectionId, title, answer.status, answer.observation || null]
