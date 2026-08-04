@@ -1,4 +1,5 @@
-﻿interface WelcomeBannerProps {
+﻿import { Link } from "react-router";
+interface WelcomeBannerProps {
     nombre: string;
 }
 
@@ -18,10 +19,10 @@ export default function WelcomeBanner({
                     y el estado de tu vehículo.
                 </p>
 
-                <button className="mt-4 inline-flex items-center gap-2 rounded-lg bg-amber-400 px-4 py-2 text-xs font-semibold text-gray-900 transition hover:bg-amber-500">
+                <Link to="/StartJourneyPage" className="mt-4 inline-flex items-center gap-2 rounded-lg bg-amber-400 px-4 py-2 text-xs font-semibold text-gray-900 transition hover:bg-amber-500">
                     Iniciar mi jornada
                     <span aria-hidden="true">→</span>
-                </button>
+                </Link>
             </div>
 
             <img
