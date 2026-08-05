@@ -18,8 +18,13 @@ interface TodayInspectionRecord {
 interface InspectionDetailRecord extends Omit<TodayInspectionRecord, "respuestas"> {
     tipo_operacion: InspectionOperation;
     estado: InspectionStatus;
-    respuestas: InspectionDetailAnswer[];
+    respuestas: Array<Omit<InspectionDetailAnswer, "evidences"> & {
+        evidences: Array<{ id: number; fileName: string; objectKey: string }>;
+    }>;
 }
+type StoredInspectionDetail = Omit<InspectionDetail, "answers"> & {
+    answers: InspectionDetailRecord["respuestas"];
+};
 
 export class InspectionsRepository {
     static async findVehicle(vehicleId: number): Promise<VehicleRecord | null> {
@@ -91,7 +96,7 @@ export class InspectionsRepository {
     static async findByIdAndConductor(
         inspectionId: number,
         conductorId: number
-    ): Promise<InspectionDetail | null> {
+    ): Promise<StoredInspectionDetail | null> {
         const result = await pool.query<InspectionDetailRecord>(
             `SELECT
                 i.id,
@@ -109,7 +114,21 @@ export class InspectionsRepository {
                             'title', r.titulo,
                             'description', COALESCE(p.descripcion, ''),
                             'status', r.estado,
-                            'observation', r.observacion
+                            'observation', r.observacion,
+                            'evidences', COALESCE(
+                                (
+                                    SELECT json_agg(
+                                        json_build_object(
+                                            'id', e.id,
+                                            'fileName', e.nombre_archivo,
+                                            'objectKey', e.s3_ruta
+                                        ) ORDER BY e.id
+                                    )
+                                    FROM evidencia_respuestas e
+                                    WHERE e.respuesta_id = r.id
+                                ),
+                                '[]'::json
+                            )
                         ) ORDER BY r.id
                     ) FILTER (WHERE r.id IS NOT NULL),
                     '[]'::json

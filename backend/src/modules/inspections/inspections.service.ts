@@ -1,4 +1,5 @@
 import { InspectionsRepository } from "./inspections.repository.js";
+import { StorageService } from "../storage/storage.service.js";
 import type { CreateInspectionInput, CreatedInspection, InspectionStatus } from "./inspections.types.js";
 
 const statuses: InspectionStatus[] = ["Sin novedad", "Con novedad", "Crítica"];
@@ -115,6 +116,20 @@ export class InspectionsService {
         if (!inspection) {
             throw new InspectionNotFoundError("El checklist no existe");
         }
-        return inspection;
+        return {
+            ...inspection,
+            answers: await Promise.all(
+                inspection.answers.map(async (answer) => ({
+                    ...answer,
+                    evidences: await Promise.all(
+                        answer.evidences.map(async (evidence) => ({
+                            id: evidence.id,
+                            fileName: evidence.fileName,
+                            url: await StorageService.createDownloadUrl(evidence.objectKey),
+                        }))
+                    ),
+                }))
+            ),
+        };
     }
 }

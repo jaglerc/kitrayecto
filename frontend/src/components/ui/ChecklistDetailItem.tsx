@@ -1,11 +1,13 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import type { InspectionDetail } from "../../services/inspection.service";
 
 type DetailAnswer = InspectionDetail["answers"][number];
-interface ChecklistDetailItemProps { answer: DetailAnswer; index: number; }
+interface ChecklistDetailItemProps { answer: DetailAnswer; index: number; inspectionId?: number; }
 const isCritical = (status: string) => status.toLowerCase().includes("cr");
 
-export default function ChecklistDetailItem({ answer, index }: ChecklistDetailItemProps) {
+export default function ChecklistDetailItem({ answer, index, inspectionId }: ChecklistDetailItemProps) {
+    const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(index < 3);
     const color = isCritical(answer.status) ? "red" : answer.status === "Con novedad" ? "amber" : "green";
     const badgeClass = color === "red" ? "bg-red-50 text-red-700" : color === "amber" ? "bg-amber-50 text-amber-700" : "bg-green-50 text-green-700";
@@ -19,7 +21,7 @@ export default function ChecklistDetailItem({ answer, index }: ChecklistDetailIt
                 <span className={`shrink-0 rounded px-2 py-1 text-[9px] font-medium ${badgeClass}`}>{answer.status}</span>
                 <span aria-hidden="true" className="text-gray-500">{isOpen ? "⌃" : "⌄"}</span>
             </button>
-            {isOpen && <div className="mx-3 mb-3 rounded-lg border border-gray-100 bg-gray-50 p-3"><p className="text-[10px] font-semibold text-gray-700">Resultado registrado</p><p className={`mt-1 text-[10px] font-medium ${color === "red" ? "text-red-600" : color === "amber" ? "text-amber-600" : "text-green-600"}`}>{answer.observation?.trim() || "Sin novedades registradas."}</p></div>}
+            {isOpen && <div className="mx-3 mb-3 rounded-lg border border-gray-100 bg-gray-50 p-3"><p className="text-[10px] font-semibold text-gray-700">Resultado registrado</p><p className={`mt-1 text-[10px] font-medium ${color === "red" ? "text-red-600" : color === "amber" ? "text-amber-600" : "text-green-600"}`}>{answer.observation?.trim() || "Sin novedades registradas."}</p>{inspectionId && <button type="button" onClick={() => navigate(`/inspections/${inspectionId}/answers/${answer.id}`)} className="mt-3 flex w-full items-center justify-between border-t border-gray-200 pt-2 text-[10px] font-semibold text-gray-700"><span>Ver detalle del elemento</span><span aria-hidden="true">›</span></button>}</div>}
         </article>
     );
 }
