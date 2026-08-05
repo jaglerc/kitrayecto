@@ -1,6 +1,6 @@
 import type { PoolClient } from "pg";
 import { pool } from "../../database/database.js";
-import type { CreateInspectionAnswer, CreateInspectionEvidence, CreatedInspection, InspectionOperation, InspectionStatus, TodayInspection, TodayInspectionAnswer } from "./inspections.types.js";
+import type { CreateInspectionAnswer, CreateInspectionEvidence, CreatedInspection, InspectionDetail, InspectionDetailAnswer, InspectionOperation, InspectionStatus, TodayInspection, TodayInspectionAnswer } from "./inspections.types.js";
 
 interface VehicleRecord { id: number; tipo_vehiculo: string; }
 interface TemplateRecord { id: number; titulo: string; }
@@ -13,6 +13,12 @@ interface TodayInspectionRecord {
     tipo_vehiculo: string;
     placa: string;
     respuestas: TodayInspectionAnswer[];
+}
+
+interface InspectionDetailRecord extends Omit<TodayInspectionRecord, "respuestas"> {
+    tipo_operacion: InspectionOperation;
+    estado: InspectionStatus;
+    respuestas: InspectionDetailAnswer[];
 }
 
 export class InspectionsRepository {
@@ -73,6 +79,61 @@ export class InspectionsRepository {
             id: inspection.id,
             mileage: inspection.kilometraje,
             createdAt: inspection.created_at.toISOString(),
+            vehicle: {
+                id: inspection.vehiculo_id,
+                type: inspection.tipo_vehiculo.toLowerCase(),
+                plate: inspection.placa,
+            },
+            answers: inspection.respuestas,
+        };
+    }
+
+    static async findByIdAndConductor(
+        inspectionId: number,
+        conductorId: number
+    ): Promise<InspectionDetail | null> {
+        const result = await pool.query<InspectionDetailRecord>(
+            `SELECT
+                i.id,
+                i.kilometraje,
+                i.created_at,
+                i.tipo_operacion::text AS tipo_operacion,
+                i.estado,
+                v.id AS vehiculo_id,
+                v.tipo_vehiculo::text AS tipo_vehiculo,
+                v.placa,
+                COALESCE(
+                    json_agg(
+                        json_build_object(
+                            'id', r.id,
+                            'title', r.titulo,
+                            'description', COALESCE(p.descripcion, ''),
+                            'status', r.estado,
+                            'observation', r.observacion
+                        ) ORDER BY r.id
+                    ) FILTER (WHERE r.id IS NOT NULL),
+                    '[]'::json
+                ) AS respuestas
+             FROM inspecciones_vehiculares i
+             JOIN vehiculo v ON v.id = i.vehiculo_id
+             LEFT JOIN respuesta_inspecciones r ON r.inspeccion_id = i.id
+             LEFT JOIN plantillas_check p
+                ON p.tipo_vehiculo::text = v.tipo_vehiculo::text
+               AND p.titulo = r.titulo
+             WHERE i.id = $1 AND i.conductor_id = $2
+             GROUP BY i.id, v.id, v.tipo_vehiculo, v.placa`,
+            [inspectionId, conductorId]
+        );
+
+        const inspection = result.rows[0];
+        if (!inspection) return null;
+
+        return {
+            id: inspection.id,
+            mileage: inspection.kilometraje,
+            createdAt: inspection.created_at.toISOString(),
+            operation: inspection.tipo_operacion,
+            status: inspection.estado,
             vehicle: {
                 id: inspection.vehiculo_id,
                 type: inspection.tipo_vehiculo.toLowerCase(),

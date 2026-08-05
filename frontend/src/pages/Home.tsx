@@ -42,7 +42,7 @@ export default function Home() {
     if (!usuario) return null;
 
     return (
-        <div>
+        <div className="min-h-dvh bg-white">
             <Header nombre={usuario.nombre} role={usuario.role} />
             <main className="px-2 pb-24 pt-24">
                 <div>

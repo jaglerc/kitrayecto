@@ -28,7 +28,7 @@ export default function FooterNav({ opcion, onOpcion }: FooterNavProps) {
     });
 
     return (
-        <footer className="absolute bottom-0 left-0 right-0 z-50 border-t border-gray-100 bg-white px-2 py-2 shadow-sm">
+        <footer className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-100 bg-white px-2 py-2 shadow-sm">
             <nav className="mx-auto flex max-w-md items-end justify-between gap-13">
                 <button onClick={() => clickOpcion("inicio")} className={`flex min-w-0 flex-1 flex-col items-center justify-center gap-1 transition-all ${opcionActiva === "inicio" ? "scale-105 opacity-100" : "opacity-40 hover:opacity-75"}`}>
                     <img
