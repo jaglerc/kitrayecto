@@ -32,6 +32,7 @@ export default function QuickActions({ tripStatus, onFinishTrip }: QuickActionsP
                     titulo="Combustible"
                     descripcion="Registrar suministro"
                     img={combustible}
+                    onClick={() => navigate("/fuel")}
                 />
                 <ActionCard
                     titulo="Mantenimiento"
