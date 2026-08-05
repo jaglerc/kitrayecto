@@ -9,6 +9,9 @@ interface AccidentRecord {
     tipo_vehiculo: string;
     placa: string;
     conductor_nombre?: string;
+    conductor_cedula?: string;
+    conductor_telefono?: string | null;
+    conductor_eps?: string | null;
 }
 
 const toPending = (row: AccidentRecord): PendingAccident => ({
@@ -66,7 +69,8 @@ export class AccidentsRepository {
     static async findById(conductorId: number, accidentId: number): Promise<AccidentDetail | null> {
         const result = await pool.query<AccidentRecord>(
             `SELECT a.id, a.created_at, t.vehiculo_id, v.tipo_vehiculo::text AS tipo_vehiculo,
-                    v.placa, u.nombre AS conductor_nombre
+                    v.placa, u.nombre AS conductor_nombre, u.cedula AS conductor_cedula,
+                    u.telefono AS conductor_telefono, u.eps AS conductor_eps
              FROM accidentes_trayectos a
              JOIN trayectos t ON t.id = a.trayecto_id
              JOIN vehiculo v ON v.id = t.vehiculo_id
@@ -75,7 +79,13 @@ export class AccidentsRepository {
             [accidentId, conductorId]
         );
         const row = result.rows[0];
-        return row ? { ...toPending(row), driverName: row.conductor_nombre ?? "Conductor" } : null;
+        return row ? {
+            ...toPending(row),
+            driverName: row.conductor_nombre ?? "Conductor",
+            driverDocument: row.conductor_cedula ?? "",
+            driverPhone: row.conductor_telefono ?? null,
+            driverEps: row.conductor_eps ?? null,
+        } : null;
     }
 
     static async complete(conductorId: number, accidentId: number, input: CompleteAccidentInput): Promise<void> {
