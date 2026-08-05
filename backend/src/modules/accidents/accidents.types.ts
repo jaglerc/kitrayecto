@@ -22,4 +22,7 @@ export interface PendingAccident {
 
 export interface AccidentDetail extends PendingAccident {
     driverName: string;
+    driverDocument: string;
+    driverPhone: string | null;
+    driverEps: string | null;
 }

@@ -6,7 +6,12 @@ export interface PendingAccident {
     reportedAt: string;
     vehicle: { id: number; type: VehicleType; plate: string };
 }
-export interface AccidentDetail extends PendingAccident { driverName: string; }
+export interface AccidentDetail extends PendingAccident {
+    driverName: string;
+    driverDocument: string;
+    driverPhone: string | null;
+    driverEps: string | null;
+}
 export interface CompleteAccidentRequest {
     accidentTime: string; location: string; description: string;
     driverInjured: boolean; vehicleDamaged: boolean; thirdPartiesInvolved: boolean;
