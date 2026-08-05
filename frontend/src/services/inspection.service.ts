@@ -63,6 +63,18 @@ export interface TodayInspection {
     }>;
 }
 
+export interface InspectionDetail extends Omit<TodayInspection, "answers"> {
+    operation: "Check_in" | "Check_out";
+    status: InspectionStatus;
+    answers: Array<{
+        id: number;
+        title: string;
+        description: string;
+        status: InspectionStatus;
+        observation: string | null;
+    }>;
+}
+
 const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:3000").replace(/\/+$/, "");
 
 const getErrorMessage = async (response: Response, fallback: string) => {
@@ -75,6 +87,17 @@ const getErrorMessage = async (response: Response, fallback: string) => {
 };
 
 export const inspectionService = {
+    async findById(inspectionId: number): Promise<InspectionDetail> {
+        const token = localStorage.getItem("token");
+        const response = await fetch(`${API_URL}/inspections/${inspectionId}`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!response.ok) {
+            throw new Error(await getErrorMessage(response, "No fue posible consultar el checklist"));
+        }
+        return response.json();
+    },
+
     async findToday(): Promise<TodayInspection | null> {
         const token = localStorage.getItem("token");
         const response = await fetch(`${API_URL}/inspections/today`, {

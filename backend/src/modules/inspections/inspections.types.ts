@@ -47,3 +47,13 @@ export interface TodayInspection {
     };
     answers: TodayInspectionAnswer[];
 }
+
+export interface InspectionDetailAnswer extends TodayInspectionAnswer {
+    description: string;
+}
+
+export interface InspectionDetail extends Omit<TodayInspection, "answers"> {
+    operation: InspectionOperation;
+    status: InspectionStatus;
+    answers: InspectionDetailAnswer[];
+}

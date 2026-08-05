@@ -8,6 +8,7 @@ import {
 import Login from "./pages/Login";
 import Home from "./pages/Home";
 import StartJourneyPage from "./pages/StartJourneyPage"
+import InspectionDetailPage from "./pages/InspectionDetailPage";
 function App() {
     return (
         <BrowserRouter>
@@ -16,6 +17,7 @@ function App() {
                 <Route path="/login" element={<Login />}/>
                 <Route path="/home" element={<Home />} />
                 <Route path="/StartJourneyPage" element={<StartJourneyPage/> }/>
+                <Route path="/inspections/:inspectionId" element={<InspectionDetailPage />} />
             </Routes>
         </BrowserRouter>
     );
