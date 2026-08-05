@@ -51,11 +51,11 @@ export default function TodaySummary({ inspection }: TodaySummaryProps) {
                     <div className="mb-2 flex items-center justify-between"><h3 className="text-xs font-semibold text-gray-900">Checklist de entrada</h3><span className="text-[10px] text-gray-500">{inspection.answers.length} elementos</span></div>
                     <div className="divide-y divide-gray-100">
                         {visibleAnswers.map((answer) => (
-                            <div key={answer.id} className="flex items-center justify-between gap-2 py-2">
+                            <button type="button" onClick={() => navigate(`/inspections/${inspection.id}/answers/${answer.id}`)} key={answer.id} className="flex w-full items-center justify-between gap-2 py-2 text-left">
                                 <span className="min-w-0 flex-1 truncate text-[10px] text-gray-700">{answer.title}</span>
                                 <span className={`rounded px-2 py-1 text-[9px] font-medium ${getStatusClasses(answer.status)}`}>{answer.status}</span>
                                 <span aria-hidden="true" className="text-xs text-gray-400">›</span>
-                            </div>
+                            </button>
                         ))}
                     </div>
                     <button type="button" onClick={openDetail} className="mt-2 flex w-full items-center justify-between border-t border-gray-100 pt-3 text-xs font-medium text-gray-700"><span>Ver checklist completo</span><span aria-hidden="true">›</span></button>

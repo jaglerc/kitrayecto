@@ -50,6 +50,11 @@ export interface TodayInspection {
 
 export interface InspectionDetailAnswer extends TodayInspectionAnswer {
     description: string;
+    evidences: Array<{
+        id: number;
+        fileName: string;
+        url: string;
+    }>;
 }
 
 export interface InspectionDetail extends Omit<TodayInspection, "answers"> {

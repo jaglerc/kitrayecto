@@ -72,6 +72,11 @@ export interface InspectionDetail extends Omit<TodayInspection, "answers"> {
         description: string;
         status: InspectionStatus;
         observation: string | null;
+        evidences: Array<{
+            id: number;
+            fileName: string;
+            url: string;
+        }>;
     }>;
 }
 

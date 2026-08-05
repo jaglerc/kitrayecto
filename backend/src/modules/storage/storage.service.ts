@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import {
     DeleteObjectCommand,
+    GetObjectCommand,
     HeadObjectCommand,
     PutObjectCommand,
 } from "@aws-sdk/client-s3";
@@ -35,6 +36,21 @@ const isAllowedContentType = (
 export class StorageValidationError extends Error {}
 
 export class StorageService {
+    static async createDownloadUrl(objectKey: string): Promise<string> {
+        if (!objectKey.startsWith(`${storageConfig.uploadPrefix}/`)) {
+            throw new StorageValidationError("La ruta del archivo no es válida");
+        }
+
+        return getSignedUrl(
+            s3Client,
+            new GetObjectCommand({
+                Bucket: storageConfig.bucketName,
+                Key: objectKey,
+            }),
+            { expiresIn: UPLOAD_URL_EXPIRATION_SECONDS }
+        );
+    }
+
     static async createUploadUrl(
         input: CreateUploadUrlInput
     ): Promise<UploadUrlResponse> {
