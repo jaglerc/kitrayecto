@@ -10,6 +10,8 @@ import Home from "./pages/Home";
 import StartJourneyPage from "./pages/StartJourneyPage"
 import InspectionDetailPage from "./pages/InspectionDetailPage";
 import InspectionAnswerDetailPage from "./pages/InspectionAnswerDetailPage";
+import RegisterTripPage from "./pages/RegisterTripPage";
+import CheckoutJourneyPage from "./pages/CheckoutJourneyPage";
 function App() {
     return (
         <BrowserRouter>
@@ -20,6 +22,8 @@ function App() {
                 <Route path="/StartJourneyPage" element={<StartJourneyPage/> }/>
                 <Route path="/inspections/:inspectionId" element={<InspectionDetailPage />} />
                 <Route path="/inspections/:inspectionId/answers/:answerId" element={<InspectionAnswerDetailPage />} />
+                <Route path="/trips/register" element={<RegisterTripPage />} />
+                <Route path="/journey/checkout" element={<CheckoutJourneyPage />} />
             </Routes>
         </BrowserRouter>
     );

@@ -1,5 +1,6 @@
 import { InspectionsRepository } from "./inspections.repository.js";
 import { StorageService } from "../storage/storage.service.js";
+import { TripsService } from "../trips/trips.service.js";
 import type { CreateInspectionInput, CreatedInspection, InspectionStatus } from "./inspections.types.js";
 
 const statuses: InspectionStatus[] = ["Sin novedad", "Con novedad", "Crítica"];
@@ -34,6 +35,25 @@ export class InspectionsService {
             throw new InspectionConflictError(
                 "Ya registraste el checklist de entrada de hoy"
             );
+        }
+        if (input.operation === "Check_out") {
+            const [tripStatus, checkIn] = await Promise.all([
+                TripsService.findStatus(conductorId),
+                InspectionsRepository.findTodayByConductor(conductorId),
+            ]);
+            if (!tripStatus.canCheckout || !checkIn) {
+                throw new InspectionConflictError(
+                    tripStatus.activeTrip
+                        ? "Primero debes terminar el viaje actual"
+                        : "Debes completar al menos un viaje antes de finalizar la jornada"
+                );
+            }
+            if (checkIn.vehicle.id !== input.vehicleId) {
+                throw new InspectionValidationError("El vehículo no corresponde al check-in de la jornada");
+            }
+            if (checkIn.mileage !== null && input.mileage < checkIn.mileage) {
+                throw new InspectionValidationError("El kilometraje final no puede ser menor al inicial");
+            }
         }
         if (!Array.isArray(input.answers) || input.answers.length === 0) {
             throw new InspectionValidationError("Debes completar el checklist");

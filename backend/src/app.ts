@@ -5,6 +5,7 @@ import inspectionTemplatesRouter from "./modules/inspection-templates/inspection
 import inspectionsRouter from "./modules/inspections/inspections.router.js";
 import storageRouter from "./modules/storage/storage.router.js";
 import vehiclesRouter from "./modules/vehicles/vehicles.router.js";
+import tripsRouter from "./modules/trips/trips.router.js";
 const app = express();
 
 app.use(cors({
@@ -21,4 +22,5 @@ app.use("/inspection-templates", inspectionTemplatesRouter);
 app.use("/inspections", inspectionsRouter);
 app.use("/storage", storageRouter);
 app.use("/vehicles", vehiclesRouter);
+app.use("/trips", tripsRouter);
 export default app;
