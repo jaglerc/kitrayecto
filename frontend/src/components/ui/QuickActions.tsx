@@ -27,6 +27,7 @@ export default function QuickActions({ tripStatus, onFinishTrip }: QuickActionsP
                     titulo="Novedades en mi jornada"
                     descripcion="Ver y registrar novedades"
                     img={list}
+                    onClick={() => navigate("/trip-incidents/new")}
                 />
                 <ActionCard
                     titulo="Combustible"

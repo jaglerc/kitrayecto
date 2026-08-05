@@ -7,6 +7,7 @@ import storageRouter from "./modules/storage/storage.router.js";
 import vehiclesRouter from "./modules/vehicles/vehicles.router.js";
 import tripsRouter from "./modules/trips/trips.router.js";
 import fuelRouter from "./modules/fuel/fuel.router.js";
+import tripIncidentsRouter from "./modules/trip-incidents/trip-incidents.router.js";
 const app = express();
 
 app.use(cors({
@@ -25,4 +26,5 @@ app.use("/storage", storageRouter);
 app.use("/vehicles", vehiclesRouter);
 app.use("/trips", tripsRouter);
 app.use("/fuel", fuelRouter);
+app.use("/trip-incidents", tripIncidentsRouter);
 export default app;
