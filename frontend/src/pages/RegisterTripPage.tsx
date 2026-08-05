@@ -3,7 +3,10 @@ import { useNavigate } from "react-router";
 import Footer from "../components/ui/Footer";
 import JourneyHeader from "../components/ui/JourneyHeader";
 import TripCargoForm from "../components/ui/TripCargoForm";
-import VehicleSummaryCard from "../components/ui/VehicleSummaryCard";
+import TripHeaderSummary from "../components/ui/TripHeaderSummary";
+import calendarIcon from "../icons/calendar-trip.svg";
+import routeIcon from "../icons/route-trip.svg";
+import dataIcon from "../icons/clipboard.png";
 import { tripService } from "../services/trip.service";
 import type { TripStatus } from "../services/trip.service";
 
@@ -22,7 +25,7 @@ export default function RegisterTripPage() {
         });
     }, []);
 
-    const canSave = Boolean(status?.canStart && Number(eggs) > 0 && Number(balancedFeed) > 0 && observations.length <= 300);
+    const canSave = Boolean(status?.canStart && (Number(eggs) > 0 || Number(balancedFeed) > 0) && observations.length <= 300);
     const save = async () => {
         if (!canSave || isSaving) return;
         setIsSaving(true);
@@ -31,8 +34,8 @@ export default function RegisterTripPage() {
             await tripService.create({
                 observations,
                 products: [
-                    { productName: "Huevos", unit: "Unidades", quantity: Number(eggs) },
-                    { productName: "Alimento balanceado", unit: "Kilogramos", quantity: Number(balancedFeed) },
+                    ...(Number(eggs) > 0 ? [{ productName: "Huevos", unit: "Unidades", quantity: Number(eggs) }] : []),
+                    ...(Number(balancedFeed) > 0 ? [{ productName: "Alimento balanceado", unit: "Kilogramos", quantity: Number(balancedFeed) }] : []),
                 ],
             });
             navigate("/home");
@@ -60,10 +63,11 @@ export default function RegisterTripPage() {
 
                 {status?.vehicle && !status.activeTrip && (
                     <>
-                        <VehicleSummaryCard type={status.vehicle.type} plate={status.vehicle.plate} />
+                        <TripHeaderSummary type={status.vehicle.type} plate={status.vehicle.plate} driverName={user?.nombre ?? "Conductor"} />
                         <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                            <div className="mb-4 flex items-center justify-between"><div><p className="text-[10px] text-gray-500">Conductor</p><p className="text-sm font-semibold">{user?.nombre ?? "Conductor"}</p></div><div className="text-right"><p className="text-[10px] text-gray-500">Fecha y hora</p><p className="text-xs font-semibold">{new Date().toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })}</p></div></div>
-                            <label className="block text-xs font-semibold text-gray-900">2. Viaje del día<input readOnly value={`Viaje ${status.nextTripNumber}`} className="mt-2 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none" /></label>
+                            <h2 className="mb-4 flex items-center gap-2 text-xs font-bold text-gray-900"><img src={dataIcon} alt="" className="h-5 w-5 object-contain" />Datos del viaje</h2>
+                            <label className="block text-xs font-semibold text-gray-900">1. Fecha y hora<div className="mt-2 flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2"><img src={calendarIcon} alt="" className="h-5 w-5" /><span className="text-sm font-normal text-gray-600">{new Date().toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })}</span></div></label>
+                            <label className="mt-4 block text-xs font-semibold text-gray-900">2. Viaje del día<div className="mt-2 flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2"><img src={routeIcon} alt="" className="h-5 w-5" /><input readOnly value={`Viaje ${status.nextTripNumber}`} className="min-w-0 flex-1 bg-transparent text-sm font-normal outline-none" /></div></label>
                             <div className="mt-5"><TripCargoForm eggs={eggs} balancedFeed={balancedFeed} onEggsChange={setEggs} onBalancedFeedChange={setBalancedFeed} /></div>
                             <label className="mt-5 block text-xs font-semibold text-gray-900">4. Observaciones <span className="font-normal text-gray-400">(opcional)</span><textarea maxLength={300} value={observations} onChange={(event) => setObservations(event.target.value)} placeholder="Escribe cualquier observación relevante del viaje..." className="mt-2 h-24 w-full resize-none rounded-lg border border-gray-200 p-3 text-sm outline-none focus:border-amber-400" /><span className="block text-right text-[9px] text-gray-400">{observations.length}/300</span></label>
                             <button type="button" onClick={() => void save()} disabled={!canSave || isSaving} className="mt-4 w-full rounded-lg bg-amber-400 py-3 text-sm font-semibold text-gray-900 disabled:opacity-50">{isSaving ? "Registrando..." : "Registrar viaje →"}</button>

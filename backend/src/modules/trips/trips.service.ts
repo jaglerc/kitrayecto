@@ -22,18 +22,21 @@ export class TripsService {
         if (status.activeTrip) throw new TripConflictError("Ya tienes un viaje en curso");
         if (!status.vehicle) throw new TripConflictError("No tienes un vehículo asignado");
 
-        if (!Array.isArray(input.products) || input.products.length !== expectedProducts.length) {
-            throw new TripValidationError("Debes registrar toda la carga del viaje");
+        if (!Array.isArray(input.products) || input.products.length < 1 || input.products.length > expectedProducts.length) {
+            throw new TripValidationError("Debes registrar al menos un tipo de carga");
         }
-        for (const expected of expectedProducts) {
-            const product = input.products.find((item) => item.productName === expected.productName);
-            if (!product || product.unit !== expected.unit || !Number.isFinite(product.quantity) || product.quantity <= 0) {
-                throw new TripValidationError(`La cantidad de ${expected.productName.toLowerCase()} no es válida`);
+        if (new Set(input.products.map((product) => product.productName)).size !== input.products.length) {
+            throw new TripValidationError("No puedes repetir un tipo de carga");
+        }
+        for (const product of input.products) {
+            const expected = expectedProducts.find((item) => item.productName === product.productName);
+            if (!expected || product.unit !== expected.unit || !Number.isFinite(product.quantity) || product.quantity <= 0) {
+                throw new TripValidationError(`La cantidad de ${product.productName?.toLowerCase() || "carga"} no es válida`);
             }
         }
+
         const observations = input.observations?.trim() ?? "";
         if (observations.length > 300) throw new TripValidationError("Las observaciones no pueden superar 300 caracteres");
-
         try {
             return await TripsRepository.create(conductorId, status.vehicle.id, { ...input, observations });
         } catch (error) {
