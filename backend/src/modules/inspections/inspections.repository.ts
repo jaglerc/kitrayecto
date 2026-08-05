@@ -1,10 +1,19 @@
 import type { PoolClient } from "pg";
 import { pool } from "../../database/database.js";
-import type { CreateInspectionAnswer, CreateInspectionEvidence, CreatedInspection, InspectionOperation, InspectionStatus } from "./inspections.types.js";
+import type { CreateInspectionAnswer, CreateInspectionEvidence, CreatedInspection, InspectionOperation, InspectionStatus, TodayInspection, TodayInspectionAnswer } from "./inspections.types.js";
 
 interface VehicleRecord { id: number; tipo_vehiculo: string; }
 interface TemplateRecord { id: number; titulo: string; }
-interface InspectionRecord { id: number; estado: InspectionStatus; created_at: Date; }
+interface InspectionRecord { id: number; estado: InspectionStatus; kilometraje: number; created_at: Date; }
+interface TodayInspectionRecord {
+    id: number;
+    kilometraje: number | null;
+    created_at: Date;
+    vehiculo_id: number;
+    tipo_vehiculo: string;
+    placa: string;
+    respuestas: TodayInspectionAnswer[];
+}
 
 export class InspectionsRepository {
     static async findVehicle(vehicleId: number): Promise<VehicleRecord | null> {
@@ -23,11 +32,62 @@ export class InspectionsRepository {
         return result.rows;
     }
 
+    static async findTodayByConductor(
+        conductorId: number
+    ): Promise<TodayInspection | null> {
+        const result = await pool.query<TodayInspectionRecord>(
+            `SELECT
+                i.id,
+                i.kilometraje,
+                i.created_at,
+                v.id AS vehiculo_id,
+                v.tipo_vehiculo::text AS tipo_vehiculo,
+                v.placa,
+                COALESCE(
+                    json_agg(
+                        json_build_object(
+                            'id', r.id,
+                            'title', r.titulo,
+                            'status', r.estado,
+                            'observation', r.observacion
+                        ) ORDER BY r.id
+                    ) FILTER (WHERE r.id IS NOT NULL),
+                    '[]'::json
+                ) AS respuestas
+             FROM inspecciones_vehiculares i
+             JOIN vehiculo v ON v.id = i.vehiculo_id
+             LEFT JOIN respuesta_inspecciones r ON r.inspeccion_id = i.id
+             WHERE i.conductor_id = $1
+               AND i.tipo_operacion::text = 'Check_in'
+               AND i.created_at::date = (CURRENT_TIMESTAMP AT TIME ZONE 'America/Bogota')::date
+             GROUP BY i.id, v.id, v.tipo_vehiculo, v.placa
+             ORDER BY i.created_at DESC
+             LIMIT 1`,
+            [conductorId]
+        );
+
+        const inspection = result.rows[0];
+        if (!inspection) return null;
+
+        return {
+            id: inspection.id,
+            mileage: inspection.kilometraje,
+            createdAt: inspection.created_at.toISOString(),
+            vehicle: {
+                id: inspection.vehiculo_id,
+                type: inspection.tipo_vehiculo.toLowerCase(),
+                plate: inspection.placa,
+            },
+            answers: inspection.respuestas,
+        };
+    }
+
     static async create(
         conductorId: number,
         vehicleId: number,
         operation: InspectionOperation,
         status: InspectionStatus,
+        mileage: number,
         answers: CreateInspectionAnswer[],
         templatesById: Map<number, TemplateRecord>
     ): Promise<CreatedInspection> {
@@ -36,10 +96,10 @@ export class InspectionsRepository {
             await client.query("BEGIN");
             const result = await client.query<InspectionRecord>(
                 `INSERT INTO inspecciones_vehiculares
-                    (vehiculo_id, conductor_id, tipo_operacion, estado)
-                 VALUES ($1, $2, $3, $4)
-                 RETURNING id, estado, created_at`,
-                [vehicleId, conductorId, operation, status]
+                    (vehiculo_id, conductor_id, tipo_operacion, estado, kilometraje)
+                 VALUES ($1, $2, $3, $4, $5)
+                 RETURNING id, estado, kilometraje, created_at`,
+                [vehicleId, conductorId, operation, status, mileage]
             );
             const inspection = result.rows[0];
             if (!inspection) {
@@ -63,6 +123,7 @@ export class InspectionsRepository {
             return {
                 id: inspection.id,
                 status: inspection.estado,
+                mileage: inspection.kilometraje,
                 createdAt: inspection.created_at.toISOString(),
             };
         } catch (error) {
