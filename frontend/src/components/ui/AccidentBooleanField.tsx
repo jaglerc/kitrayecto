@@ -1,0 +1,4 @@
+interface AccidentBooleanFieldProps { label: string; value: boolean | null; onChange: (value: boolean) => void; }
+export default function AccidentBooleanField({ label, value, onChange }: AccidentBooleanFieldProps) {
+    return <fieldset><legend className="mb-2 text-xs font-semibold text-gray-900">{label} <span className="text-amber-500">*</span></legend><div className="grid grid-cols-2 overflow-hidden rounded-lg border border-gray-200"><button type="button" aria-pressed={value === true} onClick={() => onChange(true)} className={`py-2 text-xs ${value === true ? "bg-amber-100 font-semibold text-amber-700 ring-1 ring-inset ring-amber-400" : "bg-white text-gray-600"}`}>Sí</button><button type="button" aria-pressed={value === false} onClick={() => onChange(false)} className={`py-2 text-xs ${value === false ? "bg-amber-100 font-semibold text-amber-700 ring-1 ring-inset ring-amber-400" : "bg-white text-gray-600"}`}>No</button></div></fieldset>;
+}
