@@ -8,6 +8,7 @@ import vehiclesRouter from "./modules/vehicles/vehicles.router.js";
 import tripsRouter from "./modules/trips/trips.router.js";
 import fuelRouter from "./modules/fuel/fuel.router.js";
 import tripIncidentsRouter from "./modules/trip-incidents/trip-incidents.router.js";
+import accidentsRouter from "./modules/accidents/accidents.router.js";
 const app = express();
 
 app.use(cors({
@@ -27,4 +28,5 @@ app.use("/vehicles", vehiclesRouter);
 app.use("/trips", tripsRouter);
 app.use("/fuel", fuelRouter);
 app.use("/trip-incidents", tripIncidentsRouter);
+app.use("/accidents", accidentsRouter);
 export default app;
