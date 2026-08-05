@@ -10,6 +10,8 @@ import type { TodayInspection } from "../services/inspection.service";
 import FinishTripDialog from "../components/ui/FinishTripDialog";
 import { tripService } from "../services/trip.service";
 import type { TripStatus } from "../services/trip.service";
+import { useNavigate } from "react-router";
+import { accidentService } from "../services/accident.service";
 
 interface UsuarioGuardado {
     id: number;
@@ -17,6 +19,7 @@ interface UsuarioGuardado {
     role: string;
 }
 export default function Home() {
+    const navigate = useNavigate();
     const [todayInspection, setTodayInspection] = useState<TodayInspection | null>(null);
     const [isLoadingSummary, setIsLoadingSummary] = useState(true);
     const [tripStatus, setTripStatus] = useState<TripStatus | null>(null);
@@ -65,6 +68,16 @@ export default function Home() {
         }
     };
 
+    const reportAccident = async () => {
+        setTripActionError(null);
+        try {
+            const accident = await accidentService.report();
+            navigate(`/accidents/reported/${accident.id}`);
+        } catch (requestError) {
+            setTripActionError(requestError instanceof Error ? requestError.message : "No fue posible reportar el accidente");
+        }
+    };
+
     if (!usuario) return null;
 
     return (
@@ -80,7 +93,7 @@ export default function Home() {
                     />
 
                     <section className="flex ">
-                        <QuickActions tripStatus={tripStatus} onFinishTrip={() => setShowFinishTrip(true)} />
+                        <QuickActions tripStatus={tripStatus} onFinishTrip={() => setShowFinishTrip(true)} onReportAccident={() => void reportAccident()} />
 
                     </section>
 

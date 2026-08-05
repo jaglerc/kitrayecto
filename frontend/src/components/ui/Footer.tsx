@@ -4,6 +4,7 @@ import notificationIcon from "../../icons/notification.png"
 import houseIcon from "../../icons/apartment.png"
 import list from "../../icons/clipboard.png"
 import car from "../../icons/lorry.png"
+import { useLocation, useNavigate } from "react-router"
 
 type OpcionNav = "inicio" | "jornada" | "novedades" | "notificaciones" | "perfil";
 
@@ -13,12 +14,21 @@ interface FooterNavProps {
 }
 
 export default function FooterNav({ opcion, onOpcion }: FooterNavProps) {
+    const navigate = useNavigate();
+    const location = useLocation();
     const [opcionInterna, setOpcionInterna] = useState<OpcionNav>("inicio");
-    const opcionActiva = opcion ?? opcionInterna;
+    const opcionRuta: OpcionNav | null = location.pathname === "/home"
+        ? "inicio"
+        : location.pathname === "/notifications"
+            ? "notificaciones"
+            : null;
+    const opcionActiva = opcion ?? opcionRuta ?? opcionInterna;
 
     const clickOpcion = (nuevaOpcion: OpcionNav) => {
         setOpcionInterna(nuevaOpcion);
         onOpcion?.(nuevaOpcion);
+        if (nuevaOpcion === "inicio") navigate("/home");
+        if (nuevaOpcion === "notificaciones") navigate("/notifications");
     };
 
     const estiloIcono = (boton: OpcionNav) => ({

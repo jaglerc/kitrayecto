@@ -11,9 +11,10 @@ import type { TripStatus } from "../../services/trip.service";
 interface QuickActionsProps {
     tripStatus: TripStatus | null;
     onFinishTrip: () => void;
+    onReportAccident: () => void;
 }
 
-export default function QuickActions({ tripStatus, onFinishTrip }: QuickActionsProps) {
+export default function QuickActions({ tripStatus, onFinishTrip, onReportAccident }: QuickActionsProps) {
     const navigate = useNavigate();
     const handleTrip = () => {
         if (tripStatus?.activeTrip) { onFinishTrip(); return; }
@@ -44,6 +45,7 @@ export default function QuickActions({ tripStatus, onFinishTrip }: QuickActionsP
                     titulo="Accidente"
                     descripcion="Reportar accidente"
                     img={accidente}
+                    onClick={onReportAccident}
                 />
                 <ActionCard
                     titulo={tripStatus?.activeTrip ? "Terminar viaje" : "Registrar viaje"}

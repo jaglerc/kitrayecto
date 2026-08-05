@@ -14,6 +14,9 @@ import RegisterTripPage from "./pages/RegisterTripPage";
 import CheckoutJourneyPage from "./pages/CheckoutJourneyPage";
 import FuelRegistrationPage from "./pages/FuelRegistrationPage";
 import TripIncidentPage from "./pages/TripIncidentPage";
+import AccidentReportedPage from "./pages/AccidentReportedPage";
+import NotificationsPage from "./pages/NotificationsPage";
+import AccidentFormPage from "./pages/AccidentFormPage";
 function App() {
     return (
         <BrowserRouter>
@@ -28,6 +31,9 @@ function App() {
                 <Route path="/journey/checkout" element={<CheckoutJourneyPage />} />
                 <Route path="/fuel" element={<FuelRegistrationPage />} />
                 <Route path="/trip-incidents/new" element={<TripIncidentPage />} />
+                <Route path="/accidents/reported/:accidentId" element={<AccidentReportedPage />} />
+                <Route path="/accidents/:accidentId/complete" element={<AccidentFormPage />} />
+                <Route path="/notifications" element={<NotificationsPage />} />
             </Routes>
         </BrowserRouter>
     );
