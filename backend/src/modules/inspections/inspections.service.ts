@@ -10,6 +10,7 @@ const priority: Record<InspectionStatus, number> = {
 
 export class InspectionValidationError extends Error {}
 export class InspectionConflictError extends Error {}
+export class InspectionNotFoundError extends Error {}
 
 export class InspectionsService {
     static async create(conductorId: number, input: CreateInspectionInput): Promise<CreatedInspection> {
@@ -100,5 +101,20 @@ export class InspectionsService {
 
     static async findToday(conductorId: number): Promise<import("./inspections.types.js").TodayInspection | null> {
         return InspectionsRepository.findTodayByConductor(conductorId);
+    }
+
+    static async findById(conductorId: number, inspectionId: number): Promise<import("./inspections.types.js").InspectionDetail> {
+        if (!Number.isInteger(inspectionId) || inspectionId <= 0) {
+            throw new InspectionValidationError("El identificador del checklist no es valido");
+        }
+
+        const inspection = await InspectionsRepository.findByIdAndConductor(
+            inspectionId,
+            conductorId
+        );
+        if (!inspection) {
+            throw new InspectionNotFoundError("El checklist no existe");
+        }
+        return inspection;
     }
 }
