@@ -51,7 +51,7 @@ export default function InspectionDetailPage() {
                         <section>
                             <h2 className="text-sm font-bold text-gray-900">Detalle del checklist</h2>
                             <p className="mb-3 text-[10px] text-gray-500">Consulta el resultado de cada ítem.</p>
-                            <div className="space-y-2">{inspection.answers.map((answer, index) => <ChecklistDetailItem key={answer.id} answer={answer} index={index} />)}</div>
+                            <div className="space-y-2">{inspection.answers.map((answer, index) => <ChecklistDetailItem key={answer.id} answer={answer} index={index} inspectionId={inspection.id} />)}</div>
                         </section>
                     </>
                 )}
