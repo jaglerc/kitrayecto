@@ -100,11 +100,16 @@ export class InspectionsRepository {
         answerId: number,
         evidence: CreateInspectionEvidence
     ): Promise<void> {
+        const fileName = evidence.objectKey.split("/").at(-1);
+        if (!fileName) {
+            throw new Error("La evidencia no contiene un nombre de archivo válido");
+        }
+
         await client.query(
             `INSERT INTO evidencia_respuestas
-                (respuesta_inspeccion_id, object_key, mime_type, size_bytes)
-             VALUES ($1, $2, $3, $4)`,
-            [answerId, evidence.objectKey, evidence.contentType, evidence.size]
+                (respuesta_id, s3_ruta, nombre_archivo)
+             VALUES ($1, $2, $3)`,
+            [answerId, evidence.objectKey, fileName]
         );
     }
 }
