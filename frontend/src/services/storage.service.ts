@@ -24,7 +24,9 @@ const API_URL = (
 
 const MAX_FILE_SIZE = 2.5 * 1024 * 1024;
 const MAX_IMAGE_DIMENSION = 1920;
-const MIN_IMAGE_QUALITY = 0.5;
+const MIN_IMAGE_DIMENSION = 1280;
+const IMAGE_DIMENSION_REDUCTION = 0.85;
+const IMAGE_QUALITIES = [0.82, 0.74, 0.66, 0.6, 0.55];
 
 const getToken = () => localStorage.getItem("token");
 
@@ -62,39 +64,55 @@ export const compressImage = async (file: File): Promise<File> => {
     }
 
     const bitmap = await createImageBitmap(file);
-    const scale = Math.min(
-        1,
-        MAX_IMAGE_DIMENSION / Math.max(bitmap.width, bitmap.height)
+    const originalMaxDimension = Math.max(bitmap.width, bitmap.height);
+    const minimumTargetDimension = Math.min(
+        MIN_IMAGE_DIMENSION,
+        originalMaxDimension
     );
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(bitmap.width * scale);
-    canvas.height = Math.round(bitmap.height * scale);
+    let targetDimension = Math.min(
+        MAX_IMAGE_DIMENSION,
+        originalMaxDimension
+    );
 
-    const context = canvas.getContext("2d");
-    if (!context) {
+    try {
+        while (targetDimension >= minimumTargetDimension) {
+            const scale = targetDimension / originalMaxDimension;
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+            canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+
+            const context = canvas.getContext("2d");
+            if (!context) {
+                throw new Error("El navegador no permite procesar la imagen");
+            }
+
+            context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+
+            for (const quality of IMAGE_QUALITIES) {
+                const blob = await canvasToBlob(canvas, quality);
+
+                if (blob.size <= MAX_FILE_SIZE) {
+                    return new File(
+                        [blob],
+                        `${crypto.randomUUID()}.webp`,
+                        { type: "image/webp" }
+                    );
+                }
+            }
+
+            if (targetDimension === minimumTargetDimension) break;
+
+            targetDimension = Math.max(
+                minimumTargetDimension,
+                Math.floor(targetDimension * IMAGE_DIMENSION_REDUCTION)
+            );
+        }
+    } finally {
         bitmap.close();
-        throw new Error("El navegador no permite procesar la imagen");
     }
 
-    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    bitmap.close();
-
-    let quality = 0.82;
-    let blob = await canvasToBlob(canvas, quality);
-
-    while (blob.size > MAX_FILE_SIZE && quality > MIN_IMAGE_QUALITY) {
-        quality = Math.max(MIN_IMAGE_QUALITY, quality - 0.08);
-        blob = await canvasToBlob(canvas, quality);
-    }
-
-    if (blob.size > MAX_FILE_SIZE) {
-        throw new Error("No fue posible reducir la imagen a menos de 2.5 MB");
-    }
-
-    return new File(
-        [blob],
-        `${crypto.randomUUID()}.webp`,
-        { type: "image/webp" }
+    throw new Error(
+        "No fue posible preparar la imagen. Intenta tomarla más cerca del daño."
     );
 };
 
