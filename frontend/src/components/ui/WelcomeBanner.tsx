@@ -2,12 +2,18 @@
 interface WelcomeBannerProps {
     nombre: string;
     hasTodayInspection?: boolean;
+    canCheckout?: boolean;
+    journeyFinished?: boolean;
 }
 
 export default function WelcomeBanner({
     nombre,
     hasTodayInspection = false,
+    canCheckout = false,
+    journeyFinished = false,
 }: WelcomeBannerProps) {
+    const destination = !hasTodayInspection ? "/StartJourneyPage" : canCheckout ? "/journey/checkout" : "/home";
+    const buttonLabel = !hasTodayInspection ? "Iniciar mi jornada" : journeyFinished ? "Jornada finalizada" : canCheckout ? "Finalizar mi jornada" : "Jornada iniciada";
     return (
         <section className="relative min-h-44 overflow-hidden rounded-xl border border-gray-200 bg-white py-4 shadow-sm px-6">
             
@@ -21,8 +27,8 @@ export default function WelcomeBanner({
                     y el estado de tu vehículo.
                 </p>
 
-                <Link to={hasTodayInspection ? "/home" : "/StartJourneyPage"} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-amber-400 px-4 py-2 text-xs font-semibold text-gray-900 transition hover:bg-amber-500">
-                    {hasTodayInspection ? "Jornada iniciada" : "Iniciar mi jornada"}
+                <Link to={destination} aria-disabled={journeyFinished} onClick={(event) => { if (journeyFinished) event.preventDefault(); }} className={`mt-4 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold text-gray-900 transition ${journeyFinished ? "cursor-default bg-gray-200 text-gray-500" : "bg-amber-400 hover:bg-amber-500"}`}>
+                    {buttonLabel}
                     <span aria-hidden="true">→</span>
                 </Link>
             </div>
