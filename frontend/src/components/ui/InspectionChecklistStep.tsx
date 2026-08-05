@@ -14,6 +14,8 @@ interface InspectionChecklistStepProps {
     answers: Record<number, InspectionAnswer>;
     isLoading: boolean;
     error: string | null;
+    mileage: string;
+    onMileageChange: (mileage: string) => void;
     onAnswerChange: (
         templateId: number,
         answer: InspectionAnswer
@@ -27,6 +29,8 @@ export default function InspectionChecklistStep({
     answers,
     isLoading,
     error,
+    mileage,
+    onMileageChange,
     onAnswerChange,
 }: InspectionChecklistStepProps) {
     return (
@@ -35,6 +39,31 @@ export default function InspectionChecklistStep({
                 type={vehicle.type}
                 plate={vehicle.plate}
             />
+
+            <div className="rounded-xl border border-gray-200 bg-white p-3">
+                <label
+                    htmlFor="inspection-mileage"
+                    className="text-xs font-semibold text-gray-900"
+                >
+                    {mode === "check-in"
+                        ? "Kilometraje inicial"
+                        : "Kilometraje final"}
+                </label>
+                <div className="mt-2 flex items-center rounded-lg border border-gray-200 px-3 focus-within:border-amber-400">
+                    <input
+                        id="inspection-mileage"
+                        type="number"
+                        min="0"
+                        step="1"
+                        inputMode="numeric"
+                        value={mileage}
+                        onChange={(event) => onMileageChange(event.target.value)}
+                        placeholder="Ej. 72450"
+                        className="min-w-0 flex-1 py-2 text-sm outline-none"
+                    />
+                    <span className="text-xs font-medium text-gray-500">km</span>
+                </div>
+            </div>
 
             <div className="rounded-xl border border-amber-100 bg-amber-50 p-3">
                 <h2 className="text-xs font-semibold text-gray-900">

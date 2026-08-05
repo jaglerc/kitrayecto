@@ -18,11 +18,32 @@ export interface CreateInspectionEvidence {
 export interface CreateInspectionInput {
     vehicleId: number;
     operation: InspectionOperation;
+    mileage: number;
     answers: CreateInspectionAnswer[];
 }
 
 export interface CreatedInspection {
     id: number;
     status: InspectionStatus;
+    mileage: number;
     createdAt: string;
+}
+
+export interface TodayInspectionAnswer {
+    id: number;
+    title: string;
+    status: InspectionStatus;
+    observation: string | null;
+}
+
+export interface TodayInspection {
+    id: number;
+    mileage: number | null;
+    createdAt: string;
+    vehicle: {
+        id: number;
+        type: string;
+        plate: string;
+    };
+    answers: TodayInspectionAnswer[];
 }

@@ -30,6 +30,7 @@ export interface UploadedInspectionEvidence {
 export interface CreateInspectionRequest {
     vehicleId: number;
     operation: "Check_in" | "Check_out";
+    mileage: number;
     answers: Array<{
         templateId: number;
         status: InspectionStatus;
@@ -41,7 +42,25 @@ export interface CreateInspectionRequest {
 export interface CreatedInspection {
     id: number;
     status: InspectionStatus;
+    mileage: number;
     createdAt: string;
+}
+
+export interface TodayInspection {
+    id: number;
+    mileage: number | null;
+    createdAt: string;
+    vehicle: {
+        id: number;
+        type: VehicleType;
+        plate: string;
+    };
+    answers: Array<{
+        id: number;
+        title: string;
+        status: InspectionStatus;
+        observation: string | null;
+    }>;
 }
 
 const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:3000").replace(/\/+$/, "");
@@ -56,6 +75,19 @@ const getErrorMessage = async (response: Response, fallback: string) => {
 };
 
 export const inspectionService = {
+    async findToday(): Promise<TodayInspection | null> {
+        const token = localStorage.getItem("token");
+        const response = await fetch(`${API_URL}/inspections/today`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+
+        if (!response.ok) {
+            throw new Error(await getErrorMessage(response, "No fue posible consultar el resumen de hoy"));
+        }
+
+        return response.json();
+    },
+
     async findTemplatesByVehicleType(vehicleType: VehicleType): Promise<InspectionTemplate[]> {
         const token = localStorage.getItem("token");
         const response = await fetch(

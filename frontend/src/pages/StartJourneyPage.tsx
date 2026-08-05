@@ -40,6 +40,8 @@ export default function StartJourneyPage() {
     const [answers, setAnswers] =
         useState<Record<number, InspectionAnswer>>({});
 
+    const [mileage, setMileage] = useState("");
+
     const [isLoadingVehicles, setIsLoadingVehicles] =
         useState(false);
 
@@ -82,6 +84,7 @@ export default function StartJourneyPage() {
             setSelectedVehicleId(null);
             setTemplates([]);
             setAnswers({});
+            setMileage("");
         }
 
         setSelectedType(type);
@@ -95,6 +98,7 @@ export default function StartJourneyPage() {
         if (vehicleId !== selectedVehicleId) {
             setTemplates([]);
             setAnswers({});
+            setMileage("");
         }
 
         setSelectedVehicleId(vehicleId);
@@ -174,6 +178,9 @@ export default function StartJourneyPage() {
     };
 
     const isChecklistComplete =
+        mileage !== "" &&
+        Number.isInteger(Number(mileage)) &&
+        Number(mileage) >= 0 &&
         templates.length > 0 &&
         templates.every((template) => {
             const answer = answers[template.id];
@@ -190,6 +197,12 @@ export default function StartJourneyPage() {
         setIsSaving(true);
         setSaveError(null);
         try {
+            const todayInspection = await inspectionService.findToday();
+            if (todayInspection) {
+                navigate("/home");
+                return;
+            }
+
             const uploadedAnswers = await Promise.all(
                 templates.map(async (template) => {
                     const answer = answers[template.id];
@@ -215,9 +228,11 @@ export default function StartJourneyPage() {
             const inspection = await inspectionService.create({
                 vehicleId: selectedVehicleId,
                 operation: "Check_in",
+                mileage: Number(mileage),
                 answers: uploadedAnswers,
             });
             setSavedInspectionId(inspection.id);
+            navigate("/home");
         } catch (requestError: unknown) {
             setSaveError(
                 requestError instanceof Error
@@ -274,6 +289,8 @@ export default function StartJourneyPage() {
                         answers={answers}
                         isLoading={isLoadingTemplates}
                         error={templatesError}
+                        mileage={mileage}
+                        onMileageChange={setMileage}
                         onAnswerChange={handleAnswerChange}
                     />
                 )}

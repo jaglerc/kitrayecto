@@ -9,6 +9,7 @@ const priority: Record<InspectionStatus, number> = {
 };
 
 export class InspectionValidationError extends Error {}
+export class InspectionConflictError extends Error {}
 
 export class InspectionsService {
     static async create(conductorId: number, input: CreateInspectionInput): Promise<CreatedInspection> {
@@ -17,6 +18,20 @@ export class InspectionsService {
         }
         if (input.operation !== "Check_in" && input.operation !== "Check_out") {
             throw new InspectionValidationError("El tipo de inspección no es válido");
+        }
+        if (!Number.isInteger(input.mileage) || input.mileage < 0) {
+            throw new InspectionValidationError(
+                "El kilometraje debe ser un número entero mayor o igual a cero"
+            );
+        }
+
+        if (
+            input.operation === "Check_in" &&
+            await InspectionsRepository.findTodayByConductor(conductorId)
+        ) {
+            throw new InspectionConflictError(
+                "Ya registraste el checklist de entrada de hoy"
+            );
         }
         if (!Array.isArray(input.answers) || input.answers.length === 0) {
             throw new InspectionValidationError("Debes completar el checklist");
@@ -80,6 +95,10 @@ export class InspectionsService {
             "Sin novedad"
         );
 
-        return InspectionsRepository.create(conductorId, input.vehicleId, input.operation, overallStatus, input.answers, templatesById);
+        return InspectionsRepository.create(conductorId, input.vehicleId, input.operation, overallStatus, input.mileage, input.answers, templatesById);
+    }
+
+    static async findToday(conductorId: number): Promise<import("./inspections.types.js").TodayInspection | null> {
+        return InspectionsRepository.findTodayByConductor(conductorId);
     }
 }
