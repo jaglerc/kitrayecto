@@ -17,6 +17,9 @@ import TripIncidentPage from "./pages/TripIncidentPage";
 import AccidentReportedPage from "./pages/AccidentReportedPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import AccidentFormPage from "./pages/AccidentFormPage";
+import ConsultationsPage from "./pages/ConsultationsPage";
+import ConsultationListPage from "./pages/ConsultationListPage";
+import ConsultationDetailPage from "./pages/ConsultationDetailPage";
 function App() {
     return (
         <BrowserRouter>
@@ -34,6 +37,9 @@ function App() {
                 <Route path="/accidents/reported/:accidentId" element={<AccidentReportedPage />} />
                 <Route path="/accidents/:accidentId/complete" element={<AccidentFormPage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
+                <Route path="/consultations" element={<ConsultationsPage />} />
+                <Route path="/consultations/:category" element={<ConsultationListPage />} />
+                <Route path="/consultations/:category/:id" element={<ConsultationDetailPage />} />
             </Routes>
         </BrowserRouter>
     );

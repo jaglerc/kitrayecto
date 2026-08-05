@@ -9,6 +9,7 @@ import tripsRouter from "./modules/trips/trips.router.js";
 import fuelRouter from "./modules/fuel/fuel.router.js";
 import tripIncidentsRouter from "./modules/trip-incidents/trip-incidents.router.js";
 import accidentsRouter from "./modules/accidents/accidents.router.js";
+import consultationsRouter from "./modules/consultations/consultations.router.js";
 const app = express();
 
 app.use(cors({
@@ -29,4 +30,5 @@ app.use("/trips", tripsRouter);
 app.use("/fuel", fuelRouter);
 app.use("/trip-incidents", tripIncidentsRouter);
 app.use("/accidents", accidentsRouter);
+app.use("/consultations", consultationsRouter);
 export default app;

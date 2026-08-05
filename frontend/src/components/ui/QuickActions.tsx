@@ -57,6 +57,7 @@ export default function QuickActions({ tripStatus, onFinishTrip, onReportAcciden
                     titulo="Consultas"
                     descripcion="Ver viajes del día"
                     img={consultas}
+                    onClick={() => navigate("/consultations")}
                 />
 
             </div>
