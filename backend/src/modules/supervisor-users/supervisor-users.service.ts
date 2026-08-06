@@ -41,6 +41,9 @@ export class SupervisorUsersService {
         }
         const user = await SupervisorUsersRepository.findById(userId);
         if (!user) throw new SupervisorUserNotFoundError("El usuario no existe");
+        await Promise.all(user.documents.map(async (document) => {
+            document.downloadUrl = await StorageService.createDownloadUrl(document.objectKey);
+        }));
         return user;
     }
 

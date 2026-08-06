@@ -1,11 +1,13 @@
 import type { AuthenticatedUser } from "../auth/auth.types.js";
 import type { DatabaseVehicleType, VehicleType } from "../vehicles/vehicles.types.js";
+import { StorageService } from "../storage/storage.service.js";
 import { SupervisorVehiclesRepository } from "./supervisor-vehicles.repository.js";
 import type {
     SupervisorVehicleDetail,
     SupervisorVehicleInput,
     SupervisorVehicleListInput,
     SupervisorVehicleListResult,
+    VehicleLegalDocumentInput,
 } from "./supervisor-vehicles.types.js";
 
 const databaseTypes: Record<VehicleType, DatabaseVehicleType> = {
@@ -35,6 +37,14 @@ export class SupervisorVehiclesService {
         this.validateId(vehicleId);
         const vehicle = await SupervisorVehiclesRepository.findById(vehicleId);
         if (!vehicle) throw new SupervisorVehicleNotFoundError("El vehículo no existe");
+        await Promise.all([
+            ...vehicle.insurances.map(async (record) => {
+                if (record.document) record.document.downloadUrl = await StorageService.createDownloadUrl(record.document.objectKey);
+            }),
+            ...vehicle.technicalInspections.map(async (record) => {
+                if (record.document) record.document.downloadUrl = await StorageService.createDownloadUrl(record.document.objectKey);
+            }),
+        ]);
         return vehicle;
     }
 
@@ -44,7 +54,8 @@ export class SupervisorVehiclesService {
         if (await SupervisorVehiclesRepository.plateExists(normalized.plate)) {
             throw new SupervisorVehicleConflictError("Ya existe un vehículo con esta placa");
         }
-        return SupervisorVehiclesRepository.create(actor, normalized);
+        const created = await SupervisorVehiclesRepository.create(actor, normalized);
+        return this.findById(created.id);
     }
 
     static async update(actor: AuthenticatedUser, vehicleId: number, input: SupervisorVehicleInput): Promise<SupervisorVehicleDetail> {
@@ -52,7 +63,10 @@ export class SupervisorVehiclesService {
         const existing = await this.findById(vehicleId);
         const normalized = this.normalize(input);
         await this.validate(normalized);
-        if (normalized.currentMileage < existing.currentMileage) {
+        if (existing.currentMileage !== null && normalized.currentMileage === null) {
+            throw new SupervisorVehicleValidationError("El kilometraje registrado no se puede eliminar");
+        }
+        if (existing.currentMileage !== null && normalized.currentMileage !== null && normalized.currentMileage < existing.currentMileage) {
             throw new SupervisorVehicleValidationError("El kilometraje no puede ser menor al registrado actualmente");
         }
         if (await SupervisorVehiclesRepository.plateExists(normalized.plate, vehicleId)) {
@@ -60,7 +74,7 @@ export class SupervisorVehiclesService {
         }
         const updated = await SupervisorVehiclesRepository.update(vehicleId, actor, normalized);
         if (!updated) throw new SupervisorVehicleNotFoundError("El vehículo no existe");
-        return updated;
+        return this.findById(vehicleId);
     }
 
     static async updateStatus(vehicleId: number, active: boolean): Promise<SupervisorVehicleDetail> {
@@ -68,6 +82,32 @@ export class SupervisorVehiclesService {
         const updated = await SupervisorVehiclesRepository.updateStatus(vehicleId, active);
         if (!updated) throw new SupervisorVehicleNotFoundError("El vehículo no existe");
         return updated;
+    }
+
+    static async createInsurance(actor: AuthenticatedUser, vehicleId: number, input: VehicleLegalDocumentInput): Promise<SupervisorVehicleDetail> {
+        await this.findById(vehicleId);
+        const normalized = this.normalizeLegalDocument(input);
+        this.validateUploadedObject(actor, vehicleId, normalized.objectKey);
+        try {
+            await SupervisorVehiclesRepository.createInsurance(vehicleId, normalized);
+        } catch (error) {
+            await Promise.allSettled([StorageService.deleteObject(normalized.objectKey)]);
+            throw error;
+        }
+        return this.findById(vehicleId);
+    }
+
+    static async createTechnicalInspection(actor: AuthenticatedUser, vehicleId: number, input: VehicleLegalDocumentInput): Promise<SupervisorVehicleDetail> {
+        await this.findById(vehicleId);
+        const normalized = this.normalizeLegalDocument(input);
+        this.validateUploadedObject(actor, vehicleId, normalized.objectKey);
+        try {
+            await SupervisorVehiclesRepository.createTechnicalInspection(vehicleId, normalized);
+        } catch (error) {
+            await Promise.allSettled([StorageService.deleteObject(normalized.objectKey)]);
+            throw error;
+        }
+        return this.findById(vehicleId);
     }
 
     private static normalize(input: SupervisorVehicleInput): SupervisorVehicleInput {
@@ -84,11 +124,11 @@ export class SupervisorVehiclesService {
     private static async validate(input: SupervisorVehicleInput): Promise<void> {
         if (!this.isVehicleType(input.type) || !input.databaseType) throw new SupervisorVehicleValidationError("El tipo de vehículo no es válido");
         if (!/^[A-Z0-9-]{3,12}$/.test(input.plate)) throw new SupervisorVehicleValidationError("La placa no es válida");
-        if (!Number.isFinite(input.currentMileage) || input.currentMileage < 0) throw new SupervisorVehicleValidationError("El kilometraje no es válido");
+        if (input.currentMileage !== null && (!Number.isFinite(input.currentMileage) || input.currentMileage < 0)) throw new SupervisorVehicleValidationError("El kilometraje no es válido");
         if (input.oilControlEnabled) {
             if (!Number.isInteger(input.oilIntervalKm) || input.oilIntervalKm! < 500) throw new SupervisorVehicleValidationError("El intervalo de aceite debe ser de mínimo 500 km");
             if (!Number.isInteger(input.oilWarningMarginKm) || input.oilWarningMarginKm! < 0 || input.oilWarningMarginKm! >= input.oilIntervalKm!) throw new SupervisorVehicleValidationError("El margen de alerta de aceite no es válido");
-            if (input.oilReferenceMileage !== null && (input.oilReferenceMileage < 0 || input.oilReferenceMileage > input.currentMileage)) throw new SupervisorVehicleValidationError("El kilometraje del último cambio de aceite no es válido");
+            if (input.oilReferenceMileage !== null && (input.oilReferenceMileage < 0 || input.currentMileage === null || input.oilReferenceMileage > input.currentMileage)) throw new SupervisorVehicleValidationError("El kilometraje del último cambio de aceite no es válido");
         }
         if (input.fumigationRequired && (!Number.isInteger(input.fumigationFrequencyDays) || input.fumigationFrequencyDays! < 1)) throw new SupervisorVehicleValidationError("La frecuencia de fumigación no es válida");
         if (!isoDate(input.lastFumigationDate)) throw new SupervisorVehicleValidationError("La fecha de fumigación no es válida");
@@ -96,5 +136,19 @@ export class SupervisorVehiclesService {
 
     private static validateId(vehicleId: number): void {
         if (!Number.isInteger(vehicleId) || vehicleId <= 0) throw new SupervisorVehicleValidationError("El vehículo no es válido");
+    }
+
+    private static normalizeLegalDocument(input: VehicleLegalDocumentInput): VehicleLegalDocumentInput {
+        const normalized = { ...input, number: input.number?.trim(), type: optionalText(input.type ?? null), provider: optionalText(input.provider ?? null), fileName: input.fileName?.trim() };
+        if (!normalized.number || !normalized.fileName || !normalized.objectKey) throw new SupervisorVehicleValidationError("Completa los datos y adjunta el documento");
+        if (!isoDate(normalized.validFrom) || !isoDate(normalized.expiresAt) || !normalized.expiresAt) throw new SupervisorVehicleValidationError("La fecha de vigencia no es válida");
+        if (normalized.validFrom && normalized.expiresAt < normalized.validFrom) throw new SupervisorVehicleValidationError("La fecha de vencimiento debe ser posterior a la vigencia");
+        if (normalized.price !== null && normalized.price !== undefined && (!Number.isFinite(normalized.price) || normalized.price < 0)) throw new SupervisorVehicleValidationError("El precio no es válido");
+        return normalized;
+    }
+
+    private static validateUploadedObject(actor: AuthenticatedUser, vehicleId: number, objectKey: string): void {
+        if (!objectKey.includes(`/vehiculos/${vehicleId}/${actor.id}/`)) throw new SupervisorVehicleValidationError("El documento no corresponde al vehículo o al usuario autenticado");
+        if (!objectKey.toLowerCase().endsWith(".pdf")) throw new SupervisorVehicleValidationError("El documento debe ser un PDF");
     }
 }

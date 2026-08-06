@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 
 import type { AuthenticatedUser } from "../auth/auth.types.js";
 import { SupervisorVehiclesService, SupervisorVehicleConflictError, SupervisorVehicleNotFoundError, SupervisorVehicleValidationError } from "./supervisor-vehicles.service.js";
-import type { SupervisorVehicleInput } from "./supervisor-vehicles.types.js";
+import type { SupervisorVehicleInput, VehicleLegalDocumentInput } from "./supervisor-vehicles.types.js";
 
 const text = (value: unknown): string => typeof value === "string" ? value : "";
 const nullableText = (value: unknown): string | null => typeof value === "string" && value ? value : null;
@@ -15,7 +15,7 @@ const inputFrom = (body: Record<string, unknown>): SupervisorVehicleInput => ({
     transitLicense: nullableText(body.transitLicense),
     brand: nullableText(body.brand),
     owner: nullableText(body.owner),
-    currentMileage: Number(body.currentMileage),
+    currentMileage: numberOrNull(body.currentMileage),
     oilControlEnabled: body.oilControlEnabled === true,
     oilIntervalKm: numberOrNull(body.oilIntervalKm),
     oilWarningMarginKm: numberOrNull(body.oilWarningMarginKm),
@@ -23,6 +23,17 @@ const inputFrom = (body: Record<string, unknown>): SupervisorVehicleInput => ({
     fumigationRequired: body.fumigationRequired === true,
     fumigationFrequencyDays: numberOrNull(body.fumigationFrequencyDays),
     lastFumigationDate: nullableText(body.lastFumigationDate),
+});
+
+const legalDocumentFrom = (body: Record<string, unknown>): VehicleLegalDocumentInput => ({
+    number: text(body.number),
+    type: nullableText(body.type),
+    validFrom: nullableText(body.validFrom),
+    expiresAt: text(body.expiresAt),
+    price: numberOrNull(body.price),
+    provider: nullableText(body.provider),
+    objectKey: text(body.objectKey),
+    fileName: text(body.fileName),
 });
 
 export class SupervisorVehiclesController {
@@ -58,6 +69,16 @@ export class SupervisorVehiclesController {
     static async updateStatus(req: Request, res: Response): Promise<void> {
         if (typeof req.body?.active !== "boolean") { res.status(400).json({ message: "El estado no es válido" }); return; }
         try { res.status(200).json(await SupervisorVehiclesService.updateStatus(Number(req.params.vehicleId), req.body.active)); }
+        catch (error) { this.handle(error, res); }
+    }
+
+    static async createInsurance(req: Request, res: Response): Promise<void> {
+        try { res.status(201).json(await SupervisorVehiclesService.createInsurance(res.locals.user as AuthenticatedUser, Number(req.params.vehicleId), legalDocumentFrom(req.body as Record<string, unknown>))); }
+        catch (error) { this.handle(error, res); }
+    }
+
+    static async createTechnicalInspection(req: Request, res: Response): Promise<void> {
+        try { res.status(201).json(await SupervisorVehiclesService.createTechnicalInspection(res.locals.user as AuthenticatedUser, Number(req.params.vehicleId), legalDocumentFrom(req.body as Record<string, unknown>))); }
         catch (error) { this.handle(error, res); }
     }
 
