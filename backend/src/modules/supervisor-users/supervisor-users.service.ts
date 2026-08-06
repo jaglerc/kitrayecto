@@ -107,10 +107,6 @@ export class SupervisorUsersService {
             );
         }
 
-        if (!isIsoDate(input.fechaVigencia) || !isIsoDate(input.fechaVencimiento)) {
-            throw new SupervisorUserValidationError("La vigencia del documento no es válida");
-        }
-
         return SupervisorUsersRepository.createDocument(userId, input);
     }
 }

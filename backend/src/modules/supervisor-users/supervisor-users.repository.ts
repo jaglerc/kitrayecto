@@ -57,7 +57,6 @@ export class SupervisorUsersRepository {
                 ciudad_expedicion_documento,
                 eps,
                 telefono,
-                requiere_manipulacion_alimentos,
                 categoria_licencia,
                 vencimiento_licencia,
                 role,
@@ -67,7 +66,7 @@ export class SupervisorUsersRepository {
              )
              VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8,
-                $9, $10, $11, $12, $13, TRUE, CURRENT_TIMESTAMP
+                $9, $10, $11, $12, TRUE, CURRENT_TIMESTAMP
              )
              RETURNING id, cedula, nombre, segundo_nombre, apellido, role, estado`,
             [
@@ -79,7 +78,6 @@ export class SupervisorUsersRepository {
                 input.ciudadExpedicionDocumento,
                 input.eps,
                 input.telefono,
-                input.requiereManipulacionAlimentos,
                 input.categoriaLicencia,
                 input.vencimientoLicencia,
                 input.role,
@@ -111,19 +109,15 @@ export class SupervisorUsersRepository {
                 tipo_documento,
                 s3_ruta,
                 nombre_archivo,
-                fecha_vigencia,
-                fecha_vencimiento,
                 created_at
              )
-             VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
+             VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
              RETURNING id, tipo_documento, s3_ruta, nombre_archivo`,
             [
                 userId,
                 input.tipoDocumento,
                 input.objectKey,
                 input.objectKey.split("/").at(-1),
-                input.fechaVigencia,
-                input.fechaVencimiento,
             ]
         );
 

@@ -24,7 +24,6 @@ interface CreateUserBody {
     ciudadExpedicionDocumento?: unknown;
     eps?: unknown;
     telefono?: unknown;
-    requiereManipulacionAlimentos?: unknown;
     categoriaLicencia?: unknown;
     vencimientoLicencia?: unknown;
     role?: unknown;
@@ -34,8 +33,6 @@ interface CreateUserBody {
 interface CreateDocumentBody {
     tipoDocumento?: unknown;
     objectKey?: unknown;
-    fechaVigencia?: unknown;
-    fechaVencimiento?: unknown;
 }
 
 const text = (value: unknown): string => typeof value === "string" ? value : "";
@@ -55,7 +52,6 @@ export class SupervisorUsersController {
             ciudadExpedicionDocumento: nullableText(body.ciudadExpedicionDocumento),
             eps: nullableText(body.eps),
             telefono: nullableText(body.telefono),
-            requiereManipulacionAlimentos: body.requiereManipulacionAlimentos === true,
             categoriaLicencia: nullableText(body.categoriaLicencia),
             vencimientoLicencia: nullableText(body.vencimientoLicencia),
             role: text(body.role) as UserRole,
@@ -83,8 +79,6 @@ export class SupervisorUsersController {
         const input: CreateSupervisorUserDocumentInput = {
             tipoDocumento,
             objectKey: text(body.objectKey),
-            fechaVigencia: nullableText(body.fechaVigencia),
-            fechaVencimiento: nullableText(body.fechaVencimiento),
         };
 
         try {

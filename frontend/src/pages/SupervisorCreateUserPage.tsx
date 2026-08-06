@@ -52,8 +52,6 @@ const initialForm: FormState = {
 const createDocument = (type: SupervisorDocumentType): SupervisorDocumentValue => ({
     type,
     file: null,
-    validFrom: "",
-    validUntil: "",
 });
 
 const initialDocuments = (): Record<SupervisorDocumentType, SupervisorDocumentValue> => ({
@@ -123,8 +121,6 @@ export default function SupervisorCreateUserPage() {
             await supervisorUsersService.createDocument(userId, {
                 tipoDocumento: document.type,
                 objectKey: uploaded.objectKey,
-                fechaVigencia: document.validFrom || null,
-                fechaVencimiento: document.validUntil || null,
             });
 
             uploadedTypes.current.add(document.type);
@@ -152,7 +148,6 @@ export default function SupervisorCreateUserPage() {
                     ciudadExpedicionDocumento: form.ciudadExpedicionDocumento || null,
                     eps: form.eps || null,
                     telefono: form.telefono || null,
-                    requiereManipulacionAlimentos: form.requiereManipulacionAlimentos,
                     categoriaLicencia: form.categoriaLicencia || null,
                     vencimientoLicencia: form.vencimientoLicencia || null,
                     role: form.role,
@@ -262,10 +257,10 @@ export default function SupervisorCreateUserPage() {
                     <FormSection title="Documentos">
                         <div className="grid gap-4 xl:grid-cols-2">
                             <SupervisorDocumentField label="Foto" value={documents.Foto} onChange={(value) => updateDocument("Foto", value)} />
-                            <SupervisorDocumentField label="Licencia de conducción" value={documents.Licencia_conduccion} onChange={(value) => updateDocument("Licencia_conduccion", value)} showValidity />
+                            <SupervisorDocumentField label="Licencia de conducción" value={documents.Licencia_conduccion} onChange={(value) => updateDocument("Licencia_conduccion", value)} />
                             <SupervisorDocumentField label="Cédula" value={documents.Cedula} onChange={(value) => updateDocument("Cedula", value)} />
                             {form.requiereManipulacionAlimentos && (
-                                <SupervisorDocumentField label="Certificado de manipulación de alimentos" value={documents.Certificado_manipulacion_alimentos} onChange={(value) => updateDocument("Certificado_manipulacion_alimentos", value)} showValidity required />
+                                <SupervisorDocumentField label="Certificado de manipulación de alimentos" value={documents.Certificado_manipulacion_alimentos} onChange={(value) => updateDocument("Certificado_manipulacion_alimentos", value)} required />
                             )}
                         </div>
                     </FormSection>

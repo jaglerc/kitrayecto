@@ -18,7 +18,6 @@ export interface CreateSupervisorUserInput {
     ciudadExpedicionDocumento: string | null;
     eps: string | null;
     telefono: string | null;
-    requiereManipulacionAlimentos: boolean;
     categoriaLicencia: string | null;
     vencimientoLicencia: string | null;
     role: UserRole;
@@ -38,8 +37,6 @@ export interface CreatedSupervisorUser {
 export interface CreateSupervisorUserDocumentInput {
     tipoDocumento: SupervisorDocumentType;
     objectKey: string;
-    fechaVigencia: string | null;
-    fechaVencimiento: string | null;
 }
 
 export interface CreatedSupervisorUserDocument {

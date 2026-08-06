@@ -4,15 +4,12 @@ import type { SupervisorDocumentType } from "../../services/supervisor-users.ser
 export interface SupervisorDocumentValue {
     type: SupervisorDocumentType;
     file: File | null;
-    validFrom: string;
-    validUntil: string;
 }
 
 interface SupervisorDocumentFieldProps {
     label: string;
     value: SupervisorDocumentValue;
     onChange: (value: SupervisorDocumentValue) => void;
-    showValidity?: boolean;
     required?: boolean;
 }
 
@@ -20,7 +17,6 @@ export default function SupervisorDocumentField({
     label,
     value,
     onChange,
-    showValidity = false,
     required = false,
 }: SupervisorDocumentFieldProps) {
     return (
@@ -58,34 +54,6 @@ export default function SupervisorDocumentField({
                 </p>
             )}
 
-            {showValidity && (
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    <label className="text-xs font-medium text-gray-700">
-                        Vigente desde
-                        <input
-                            type="date"
-                            value={value.validFrom}
-                            onChange={(event) => onChange({
-                                ...value,
-                                validFrom: event.target.value,
-                            })}
-                            className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 outline-none focus:border-amber-400"
-                        />
-                    </label>
-                    <label className="text-xs font-medium text-gray-700">
-                        Vigente hasta
-                        <input
-                            type="date"
-                            value={value.validUntil}
-                            onChange={(event) => onChange({
-                                ...value,
-                                validUntil: event.target.value,
-                            })}
-                            className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 outline-none focus:border-amber-400"
-                        />
-                    </label>
-                </div>
-            )}
         </article>
     );
 }
