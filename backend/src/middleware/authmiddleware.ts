@@ -12,6 +12,7 @@ import type {
 } from "../modules/auth/auth.types.js";
 
 import { validRoles } from "../modules/auth/auth.types.js";
+import { AuthRepository } from "../modules/auth/auth.repository.js";
 
 const isUserRole = (value: unknown): value is UserRole => {
     return validRoles.includes(value as UserRole)
@@ -49,9 +50,15 @@ export const AuthMiddleware = async (
             return;
         }
 
+        const identity = await AuthRepository.findActiveIdentity(userId);
+        if (!identity?.estado) {
+            res.status(401).json({ message: "El usuario está inactivo" });
+            return;
+        }
+
         const authenticatedUser: AuthenticatedUser = {
             id: userId,
-            role: payload.role
+            role: identity.role
         };
 
         res.locals.user = authenticatedUser;

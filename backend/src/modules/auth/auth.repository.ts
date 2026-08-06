@@ -14,7 +14,8 @@ export class AuthRepository {
                 nombre,
                 cedula,
                 password,
-                role
+                role,
+                estado
             FROM usuario
             WHERE cedula = $1
             LIMIT 1
@@ -26,6 +27,14 @@ export class AuthRepository {
             return null;
         }
 
+        return result.rows[0] ?? null;
+    }
+
+    static async findActiveIdentity(userId: number): Promise<Pick<User, "id" | "role" | "estado"> | null> {
+        const result = await pool.query<Pick<User, "id" | "role" | "estado">>(
+            `SELECT id, role, estado FROM usuario WHERE id = $1 LIMIT 1`,
+            [userId]
+        );
         return result.rows[0] ?? null;
     }
 }

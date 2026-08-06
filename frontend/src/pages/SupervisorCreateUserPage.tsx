@@ -311,7 +311,11 @@ export default function SupervisorCreateUserPage() {
 
                     <div className="flex justify-end rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                         <button type="submit" disabled={!canSave || isSaving} className="w-full rounded-xl bg-amber-400 px-8 py-3 text-sm font-bold text-gray-900 hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto">
-                            {isSaving ? "Guardando usuario..." : "Crear usuario"}
+                            {isSaving
+                                ? "Guardando..."
+                                : createdUserId
+                                    ? "Reintentar documentos"
+                                    : "Crear usuario"}
                         </button>
                     </div>
                 </form>

@@ -18,7 +18,7 @@ import type {
 } from "./storage.types.js";
 
 const MAX_IMAGE_FILE_SIZE = 2.5 * 1024 * 1024;
-const MAX_PDF_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_PDF_FILE_SIZE = 50 * 1024 * 1024;
 const UPLOAD_URL_EXPIRATION_SECONDS = 300;
 
 const extensionsByContentType: Record<AllowedContentType, string> = {
@@ -79,7 +79,7 @@ export class StorageService {
         if (input.size > maximumSize) {
             throw new StorageValidationError(
                 input.contentType === "application/pdf"
-                    ? "El PDF no puede superar 10 MB"
+                    ? "El PDF no puede superar 50 MB"
                     : "La imagen no puede superar 2.5 MB"
             );
         }
@@ -158,7 +158,11 @@ export class StorageService {
         };
     }
 
-    private static async deleteObject(objectKey: string): Promise<void> {
+    static async deleteObject(objectKey: string): Promise<void> {
+        if (!objectKey.startsWith(`${storageConfig.uploadPrefix}/`)) {
+            throw new StorageValidationError("La ruta del archivo no es válida");
+        }
+
         await s3Client.send(
             new DeleteObjectCommand({
                 Bucket: storageConfig.bucketName,

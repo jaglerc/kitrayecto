@@ -29,7 +29,7 @@ export default function SupervisorDocumentField({
                         {label} {required && <span className="text-red-500">*</span>}
                     </h3>
                     <p className="mt-1 text-xs text-gray-500">
-                        Imagen hasta 2.5 MB o PDF hasta 10 MB.
+                        Imagen hasta 2.5 MB o PDF hasta 50 MB.
                     </p>
                 </div>
 
