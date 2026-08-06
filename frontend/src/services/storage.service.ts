@@ -166,14 +166,27 @@ const confirmUpload = async (
 };
 
 export const storageService = {
-    async uploadImage(
+    async uploadFile(
         originalFile: File,
         module: StorageModule,
         referenceId: number
     ): Promise<ConfirmedUpload> {
-        const file = await compressImage(originalFile);
-        const authorization = await requestUploadUrl(file, module, referenceId);
+        const isImage = ["image/jpeg", "image/png", "image/webp"].includes(
+            originalFile.type
+        );
+        const isPdf = originalFile.type === "application/pdf";
 
+        if (!isImage && !isPdf) {
+            throw new Error("Selecciona una imagen JPEG, PNG, WebP o un PDF");
+        }
+
+        const file = isImage ? await compressImage(originalFile) : originalFile;
+
+        if (file.size > MAX_FILE_SIZE) {
+            throw new Error("El archivo no puede superar 2.5 MB");
+        }
+
+        const authorization = await requestUploadUrl(file, module, referenceId);
         const uploadResponse = await fetch(authorization.uploadUrl, {
             method: "PUT",
             headers: { "Content-Type": file.type },
@@ -181,7 +194,7 @@ export const storageService = {
         });
 
         if (!uploadResponse.ok) {
-            throw new Error("S3 no pudo almacenar la imagen");
+            throw new Error("S3 no pudo almacenar el archivo");
         }
 
         return confirmUpload(
@@ -189,5 +202,13 @@ export const storageService = {
             module,
             referenceId
         );
+    },
+
+    async uploadImage(
+        originalFile: File,
+        module: StorageModule,
+        referenceId: number
+    ): Promise<ConfirmedUpload> {
+        return this.uploadFile(originalFile, module, referenceId);
     },
 };
