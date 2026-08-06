@@ -28,7 +28,7 @@ const navigationItems: Array<{
     path?: string;
 }> = [
     { id: "inicio", icon: homeIcon, label: "Inicio", path: "/supervisor" },
-    { id: "usuarios", icon: usersIcon, label: "Usuarios", path: "/supervisor/users/new" },
+    { id: "usuarios", icon: usersIcon, label: "Usuarios", path: "/supervisor/users" },
     { id: "vehiculos", icon: vehicleIcon, label: "Vehículos" },
     { id: "documentos", icon: documentIcon, label: "Documentos" },
     { id: "roles", icon: shieldIcon, label: "Roles y permisos" },

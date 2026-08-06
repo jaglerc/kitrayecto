@@ -23,7 +23,7 @@ const API_URL = (
 ).replace(/\/+$/, "");
 
 const MAX_IMAGE_FILE_SIZE = 2.5 * 1024 * 1024;
-const MAX_PDF_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_PDF_FILE_SIZE = 50 * 1024 * 1024;
 const MAX_IMAGE_DIMENSION = 1920;
 const MIN_IMAGE_DIMENSION = 1280;
 const IMAGE_DIMENSION_REDUCTION = 0.85;
@@ -190,7 +190,7 @@ export const storageService = {
         if (file.size > maximumSize) {
             throw new Error(
                 isPdf
-                    ? "El PDF no puede superar 10 MB"
+                    ? "El PDF no puede superar 50 MB"
                     : "La imagen no puede superar 2.5 MB"
             );
         }

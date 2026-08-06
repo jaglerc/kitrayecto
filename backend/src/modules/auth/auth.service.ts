@@ -18,6 +18,10 @@ export class AuthService {
             throw new Error("Usuario no encontrado");
         }
 
+        if (!user.estado) {
+            throw new Error("Usuario inactivo");
+        }
+
         const isValidPassword = await bcrypt.compare(password, user.password);
 
         if (!isValidPassword) {

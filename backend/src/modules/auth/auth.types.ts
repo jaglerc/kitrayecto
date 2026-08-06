@@ -9,6 +9,7 @@ export interface User {
     nombre: string;
     password: string; // hash almacenado en la BD
     role: UserRole;
+    estado: boolean;
 }
 
 export interface AuthenticatedUser {

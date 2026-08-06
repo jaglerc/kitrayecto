@@ -11,7 +11,11 @@ router.use(
     RoleMiddleware("Supervisor", "Administrador")
 );
 
+router.get("/", SupervisorUsersController.findMany);
 router.post("/", SupervisorUsersController.create);
-router.post("/:userId/documents", SupervisorUsersController.createDocument);
+router.get("/:userId", SupervisorUsersController.findById);
+router.patch("/:userId", SupervisorUsersController.update);
+router.patch("/:userId/status", SupervisorUsersController.updateStatus);
+router.put("/:userId/documents", SupervisorUsersController.createDocument);
 
 export default router;
