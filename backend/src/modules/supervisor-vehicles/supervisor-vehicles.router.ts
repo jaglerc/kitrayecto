@@ -10,4 +10,6 @@ router.post("/", SupervisorVehiclesController.create);
 router.get("/:vehicleId", SupervisorVehiclesController.findById);
 router.patch("/:vehicleId", SupervisorVehiclesController.update);
 router.patch("/:vehicleId/status", SupervisorVehiclesController.updateStatus);
+router.post("/:vehicleId/insurance", SupervisorVehiclesController.createInsurance);
+router.post("/:vehicleId/technical-inspections", SupervisorVehiclesController.createTechnicalInspection);
 export default router;
