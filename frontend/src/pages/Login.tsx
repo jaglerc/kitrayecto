@@ -53,7 +53,7 @@ export default function Login() {
                     JSON.stringify(respuesta.user)
                 );
 
-                navigate("/home", {
+                navigate(respuesta.user.role === "Conductor" ? "/home" : "/supervisor", {
                     replace: true,
                 });
             })

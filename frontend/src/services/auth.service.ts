@@ -8,6 +8,7 @@ interface LoginResponse {
     user: {
         id: number;
         nombre: string;
+        role: "Administrador" | "Supervisor" | "Conductor";
     };
 }
 
