@@ -22,7 +22,8 @@ const API_URL = (
     import.meta.env.VITE_API_URL ?? "http://localhost:3000"
 ).replace(/\/+$/, "");
 
-const MAX_FILE_SIZE = 2.5 * 1024 * 1024;
+const MAX_IMAGE_FILE_SIZE = 2.5 * 1024 * 1024;
+const MAX_PDF_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_IMAGE_DIMENSION = 1920;
 const MIN_IMAGE_DIMENSION = 1280;
 const IMAGE_DIMENSION_REDUCTION = 0.85;
@@ -91,7 +92,7 @@ export const compressImage = async (file: File): Promise<File> => {
             for (const quality of IMAGE_QUALITIES) {
                 const blob = await canvasToBlob(canvas, quality);
 
-                if (blob.size <= MAX_FILE_SIZE) {
+                if (blob.size <= MAX_IMAGE_FILE_SIZE) {
                     return new File(
                         [blob],
                         `${crypto.randomUUID()}.webp`,
@@ -182,8 +183,16 @@ export const storageService = {
 
         const file = isImage ? await compressImage(originalFile) : originalFile;
 
-        if (file.size > MAX_FILE_SIZE) {
-            throw new Error("El archivo no puede superar 2.5 MB");
+        const maximumSize = isPdf
+            ? MAX_PDF_FILE_SIZE
+            : MAX_IMAGE_FILE_SIZE;
+
+        if (file.size > maximumSize) {
+            throw new Error(
+                isPdf
+                    ? "El PDF no puede superar 10 MB"
+                    : "La imagen no puede superar 2.5 MB"
+            );
         }
 
         const authorization = await requestUploadUrl(file, module, referenceId);

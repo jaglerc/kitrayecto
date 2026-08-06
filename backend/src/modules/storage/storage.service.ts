@@ -17,7 +17,8 @@ import type {
     UploadUrlResponse,
 } from "./storage.types.js";
 
-const MAX_FILE_SIZE = 2.5 * 1024 * 1024;
+const MAX_IMAGE_FILE_SIZE = 2.5 * 1024 * 1024;
+const MAX_PDF_FILE_SIZE = 10 * 1024 * 1024;
 const UPLOAD_URL_EXPIRATION_SECONDS = 300;
 
 const extensionsByContentType: Record<AllowedContentType, string> = {
@@ -31,6 +32,12 @@ const isAllowedContentType = (
     value: string | undefined
 ): value is AllowedContentType => {
     return Boolean(value && value in extensionsByContentType);
+};
+
+const maximumSizeFor = (contentType: AllowedContentType): number => {
+    return contentType === "application/pdf"
+        ? MAX_PDF_FILE_SIZE
+        : MAX_IMAGE_FILE_SIZE;
 };
 
 export class StorageValidationError extends Error {}
@@ -68,9 +75,12 @@ export class StorageService {
             throw new StorageValidationError("El tamaño del archivo no es válido");
         }
 
-        if (input.size > MAX_FILE_SIZE) {
+        const maximumSize = maximumSizeFor(input.contentType);
+        if (input.size > maximumSize) {
             throw new StorageValidationError(
-                "El archivo no puede superar 2.5 MB"
+                input.contentType === "application/pdf"
+                    ? "El PDF no puede superar 10 MB"
+                    : "La imagen no puede superar 2.5 MB"
             );
         }
 
@@ -127,11 +137,12 @@ export class StorageService {
 
         const contentType = metadata.ContentType;
         const size = metadata.ContentLength;
+        const isValidContentType = isAllowedContentType(contentType);
         const isValid =
-            isAllowedContentType(contentType) &&
+            isValidContentType &&
             typeof size === "number" &&
             size > 0 &&
-            size <= MAX_FILE_SIZE;
+            size <= maximumSizeFor(contentType);
 
         if (!isValid) {
             await this.deleteObject(input.objectKey);
