@@ -33,6 +33,7 @@ const quickActions = [
         icon: vehicleAddIcon,
         title: "Registrar vehículo",
         description: "Añadir un vehículo a la flota",
+        path: "/supervisor/vehicles/new",
     },
     {
         icon: uploadIcon,

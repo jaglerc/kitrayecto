@@ -1,6 +1,7 @@
 import type { PoolClient } from "pg";
 import { pool } from "../../database/database.js";
 import type { CreateInspectionAnswer, CreateInspectionEvidence, CreatedInspection, InspectionDetail, InspectionDetailAnswer, InspectionOperation, InspectionStatus, TodayInspection, TodayInspectionAnswer } from "./inspections.types.js";
+import { VehicleMileageRepository } from "../vehicles/vehicle-mileage.repository.js";
 
 interface VehicleRecord { id: number; tipo_vehiculo: string; }
 interface TemplateRecord { id: number; titulo: string; }
@@ -185,6 +186,14 @@ export class InspectionsRepository {
             if (!inspection) {
                 throw new Error("La base de datos no devolvió la inspección creada");
             }
+
+            await VehicleMileageRepository.register(client, {
+                vehicleId,
+                mileage,
+                origin: operation,
+                referenceId: inspection.id,
+                registeredBy: conductorId,
+            });
 
             for (const answer of answers) {
                 const answerId = await this.insertAnswer(

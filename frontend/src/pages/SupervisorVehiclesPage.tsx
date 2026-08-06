@@ -1,0 +1,34 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
+import SupervisorSidebar from "../components/supervisor/SupervisorSidebar";
+import vehicleIcon from "../icons/supervisor/vehicle.svg";
+import { supervisorVehiclesService } from "../services/supervisor-vehicles.service";
+import type { SupervisorVehicle, VehicleType } from "../services/supervisor-vehicles.service";
+
+const name = () => { try { return JSON.parse(localStorage.getItem("user") ?? "null")?.nombre ?? "Supervisor"; } catch { return "Supervisor"; } };
+const oilLabel = (vehicle: SupervisorVehicle) => vehicle.oilStatus === "overdue" ? "Aceite vencido" : vehicle.oilStatus === "upcoming" ? `${vehicle.oilRemainingKm} km para aceite` : vehicle.oilStatus === "pending" ? "Aceite sin referencia" : vehicle.oilStatus === "disabled" ? "Sin control de aceite" : "Aceite al día";
+
+export default function SupervisorVehiclesPage() {
+    const navigate = useNavigate();
+    const [items, setItems] = useState<SupervisorVehicle[]>([]);
+    const [search, setSearch] = useState("");
+    const [type, setType] = useState<VehicleType | "">("");
+    const [active, setActive] = useState<"" | "true" | "false">("");
+    const [page, setPage] = useState(1);
+    const [total, setTotal] = useState(0);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    useEffect(() => {
+        let mounted = true; setLoading(true); setError(null);
+        const timer = window.setTimeout(() => supervisorVehiclesService.list({ search, type, active, page }).then((result) => { if (mounted) { setItems(result.items); setTotal(result.total); } }).catch((reason) => mounted && setError(reason instanceof Error ? reason.message : "Error al consultar")).finally(() => mounted && setLoading(false)), 200);
+        return () => { mounted = false; window.clearTimeout(timer); };
+    }, [search, type, active, page]);
+    const pages = Math.max(1, Math.ceil(total / 12));
+    return <div className="min-h-dvh bg-gray-50"><SupervisorSidebar name={name()} active="vehiculos" />
+        <main className="px-4 py-6 md:ml-64 md:px-8 lg:px-10">
+            <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-center gap-4"><span className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-50"><img src={vehicleIcon} alt="" className="h-7 w-7" /></span><div><p className="text-xs font-medium uppercase tracking-wider text-amber-500">Gestión de flota</p><h1 className="text-2xl font-bold">Vehículos</h1><p className="text-sm text-gray-500">Administra la flota y sus alertas preventivas.</p></div></div><button onClick={() => navigate("/supervisor/vehicles/new")} className="rounded-xl bg-amber-400 px-5 py-3 text-sm font-bold hover:bg-amber-500">Registrar vehículo</button></header>
+            <section className="mt-6 grid gap-3 rounded-2xl border bg-white p-5 shadow-sm lg:grid-cols-[1fr_220px_220px]"><input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Buscar placa o marca" className="rounded-xl border px-4 py-3"/><select value={type} onChange={(e) => { setType(e.target.value as VehicleType | ""); setPage(1); }} className="rounded-xl border bg-white px-4"><option value="">Todos los tipos</option><option value="camioneta">Camioneta</option><option value="motocicleta">Motocicleta</option><option value="motocarguero">Motocarguero</option><option value="carro">Carro</option></select><select value={active} onChange={(e) => { setActive(e.target.value as typeof active); setPage(1); }} className="rounded-xl border bg-white px-4"><option value="">Todos los estados</option><option value="true">Activos</option><option value="false">Inactivos</option></select></section>
+            {error && <p className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-red-600">{error}</p>}
+            <section className="mt-5 overflow-hidden rounded-2xl border bg-white shadow-sm"><div className="overflow-x-auto"><table className="w-full min-w-[850px] text-left text-sm"><thead className="border-b bg-gray-50 text-xs uppercase text-gray-500"><tr><th className="px-5 py-4">Placa</th><th className="px-5 py-4">Tipo y marca</th><th className="px-5 py-4">Kilometraje</th><th className="px-5 py-4">Aceite</th><th className="px-5 py-4">Fumigación</th><th className="px-5 py-4">Estado</th><th /></tr></thead><tbody className="divide-y">{items.map((vehicle) => <tr key={vehicle.id} className="hover:bg-amber-50/30"><td className="px-5 py-4 font-bold">{vehicle.plate}</td><td className="px-5 py-4 capitalize">{vehicle.type}{vehicle.brand ? ` · ${vehicle.brand}` : ""}</td><td className="px-5 py-4">{vehicle.currentMileage.toLocaleString("es-CO")} km</td><td className={`px-5 py-4 ${vehicle.oilStatus === "overdue" ? "font-semibold text-red-600" : vehicle.oilStatus === "upcoming" ? "text-amber-600" : "text-gray-600"}`}>{oilLabel(vehicle)}</td><td className="px-5 py-4">{vehicle.nextFumigationDate ?? (vehicle.fumigationRequired ? "Sin fecha base" : "No requiere")}</td><td className="px-5 py-4">{vehicle.active ? "Activo" : "Inactivo"}</td><td className="px-5 py-4 text-right"><button onClick={() => navigate(`/supervisor/vehicles/${vehicle.id}`)} className="rounded-lg border border-amber-300 px-4 py-2 font-semibold">Ver vehículo</button></td></tr>)}</tbody></table></div>{loading && <p className="p-8 text-center text-gray-500">Consultando vehículos...</p>}{!loading && !items.length && <p className="p-8 text-center text-gray-500">No se encontraron vehículos.</p>}<footer className="flex justify-between border-t px-5 py-4 text-sm text-gray-500"><span>{total} vehículos</span><div className="flex gap-2"><button disabled={page <= 1} onClick={() => setPage(page - 1)} className="rounded-lg border px-3 py-2 disabled:opacity-40">Anterior</button><span className="py-2">{page} de {pages}</span><button disabled={page >= pages} onClick={() => setPage(page + 1)} className="rounded-lg border px-3 py-2 disabled:opacity-40">Siguiente</button></div></footer></section>
+        </main></div>;
+}

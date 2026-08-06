@@ -1,6 +1,7 @@
 import type { PoolClient } from "pg";
 import { pool } from "../../database/database.js";
 import type { CreateFuelRecordInput, CreatedFuelRecord } from "./fuel.types.js";
+import { VehicleMileageRepository } from "../vehicles/vehicle-mileage.repository.js";
 
 export class FuelRepository {
     static async create(
@@ -25,6 +26,14 @@ export class FuelRepository {
             );
             const fuelRecord = result.rows[0];
             if (!fuelRecord) throw new Error("FUEL_RECORD_NOT_CREATED");
+
+            await VehicleMileageRepository.register(client, {
+                vehicleId,
+                mileage: input.currentMileage,
+                origin: "Combustible",
+                referenceId: fuelRecord.id,
+                registeredBy: conductorId,
+            });
 
             await this.insertEvidence(client, fuelRecord.id, input.evidence.objectKey);
             await client.query("COMMIT");

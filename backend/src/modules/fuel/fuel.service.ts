@@ -41,6 +41,13 @@ export class FuelService {
             throw new FuelValidationError("La foto del recibo no es válida");
         }
 
-        return FuelRepository.create(activeTrip.id, activeTrip.vehicle.id, conductorId, { ...input, observations });
+        try {
+            return await FuelRepository.create(activeTrip.id, activeTrip.vehicle.id, conductorId, { ...input, observations });
+        } catch (error) {
+            if (error instanceof Error && error.message === "MILEAGE_LOWER_THAN_CURRENT") {
+                throw new FuelValidationError("El kilometraje no puede ser menor al registrado actualmente para el vehículo");
+            }
+            throw error;
+        }
     }
 }
