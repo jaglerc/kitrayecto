@@ -27,6 +27,7 @@ import SupervisorUserDetailPage from "./pages/SupervisorUserDetailPage";
 import SupervisorVehiclesPage from "./pages/SupervisorVehiclesPage";
 import SupervisorVehicleFormPage from "./pages/SupervisorVehicleFormPage";
 import MaintenanceOptionsPage from "./pages/MaintenanceOptionsPage";
+import SupervisorIncidentsPage from "./pages/SupervisorIncidentsPage";
 import RoleRoute from "./components/auth/RoleRoute";
 function App() {
     return (
@@ -43,6 +44,7 @@ function App() {
                 <Route path="/supervisor/vehicles" element={<RoleRoute allowedRoles={["Supervisor", "Administrador"]}><SupervisorVehiclesPage /></RoleRoute>} />
                 <Route path="/supervisor/vehicles/new" element={<RoleRoute allowedRoles={["Supervisor", "Administrador"]}><SupervisorVehicleFormPage /></RoleRoute>} />
                 <Route path="/supervisor/vehicles/:vehicleId" element={<RoleRoute allowedRoles={["Supervisor", "Administrador"]}><SupervisorVehicleFormPage /></RoleRoute>} />
+                <Route path="/supervisor/incidents" element={<RoleRoute allowedRoles={["Supervisor", "Administrador"]}><SupervisorIncidentsPage /></RoleRoute>} />
                 <Route path="/StartJourneyPage" element={<StartJourneyPage/> }/>
                 <Route path="/inspections/:inspectionId" element={<InspectionDetailPage />} />
                 <Route path="/inspections/:inspectionId/answers/:answerId" element={<InspectionAnswerDetailPage />} />

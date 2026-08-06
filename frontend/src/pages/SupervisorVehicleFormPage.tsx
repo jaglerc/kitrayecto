@@ -26,6 +26,20 @@ const supervisorName = () => {
 };
 const nullableNumber = (value: string): number | null => value === "" ? null : Number(value);
 
+interface LegalDocumentDraft {
+    number: string;
+    type: string;
+    provider: string;
+    validFrom: string;
+    expiresAt: string;
+    price: string;
+    file: File | null;
+}
+
+const emptyDocument = (): LegalDocumentDraft => ({
+    number: "", type: "", provider: "", validFrom: "", expiresAt: "", price: "", file: null,
+});
+
 export default function SupervisorVehicleFormPage() {
     const navigate = useNavigate();
     const { vehicleId } = useParams();
@@ -37,6 +51,8 @@ export default function SupervisorVehicleFormPage() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
+    const [insurance, setInsurance] = useState<LegalDocumentDraft>(emptyDocument);
+    const [technicalInspection, setTechnicalInspection] = useState<LegalDocumentDraft>(emptyDocument);
 
     useEffect(() => {
         if (!editing) return;
@@ -49,13 +65,40 @@ export default function SupervisorVehicleFormPage() {
     const set = <K extends keyof SupervisorVehicleInput>(key: K, value: SupervisorVehicleInput[K]) =>
         setForm((current) => ({ ...current, [key]: value }));
 
+    const uploadDocument = async (vehicleId: number, draft: LegalDocumentDraft, kind: "insurance" | "technical") => {
+        if (!draft.file) throw new Error("Adjunta el documento PDF");
+        const uploaded = await storageService.uploadFile(draft.file, "vehiculos", vehicleId);
+        const input = draftToInput(draft, uploaded.objectKey);
+        return kind === "insurance"
+            ? supervisorVehiclesService.addInsurance(vehicleId, input)
+            : supervisorVehiclesService.addTechnicalInspection(vehicleId, input);
+    };
+
     const submit = async (event: React.FormEvent) => {
         event.preventDefault(); setSaving(true); setError(null); setSuccess(null);
         try {
-            const result = editing ? await supervisorVehiclesService.update(id, form) : await supervisorVehiclesService.create(form);
+            if (!editing) {
+                if (!insurance.number || !insurance.expiresAt || !insurance.file) throw new Error("Completa y adjunta el seguro del vehículo");
+                if (!technicalInspection.number || !technicalInspection.expiresAt || !technicalInspection.file) throw new Error("Completa y adjunta la revisión técnico-mecánica");
+            }
+            let result = editing ? await supervisorVehiclesService.update(id, form) : await supervisorVehiclesService.create(form);
             setVehicle(result); setForm(result);
-            setSuccess(editing ? "Vehículo actualizado correctamente" : "Vehículo registrado. Ya puedes completar sus documentos.");
-            if (!editing) navigate(`/supervisor/vehicles/${result.id}`, { replace: true });
+            if (editing) {
+                setSuccess("Vehículo actualizado correctamente");
+            } else {
+                navigate(`/supervisor/vehicles/${result.id}`, { replace: true });
+                try {
+                    result = await uploadDocument(result.id, insurance, "insurance");
+                    setVehicle(result); setForm(result);
+                    result = await uploadDocument(result.id, technicalInspection, "technical");
+                    setVehicle(result); setForm(result);
+                    setInsurance(emptyDocument()); setTechnicalInspection(emptyDocument());
+                    setSuccess("Vehículo y documentación registrados correctamente");
+                } catch (documentError) {
+                    setError(`El vehículo fue creado, pero no se completó toda la documentación: ${documentError instanceof Error ? documentError.message : "error al guardar documentos"}`);
+                    setSuccess("Puedes completar el documento pendiente desde esta misma pantalla.");
+                }
+            }
         } catch (reason) { setError(reason instanceof Error ? reason.message : "No fue posible guardar"); }
         finally { setSaving(false); }
     };
@@ -100,7 +143,15 @@ export default function SupervisorVehicleFormPage() {
                     {vehicle?.fumigationRequired && <Alert status={vehicle.fumigationStatus} text={vehicle.nextFumigationDate ? `Próxima fumigación: ${vehicle.nextFumigationDate}` : "Falta registrar una fumigación de referencia."} />}
                 </Card>
 
-                {!vehicle ? <Card title="Documentación legal"><p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-800">Guarda primero el vehículo. Después podrás cargar el seguro y la revisión técnico-mecánica.</p></Card> : <LegalDocuments vehicle={vehicle} onChange={(updated, message) => { setVehicle(updated); setForm(updated); setSuccess(message); setError(null); }} onError={setError} />}
+                <LegalDocuments
+                    vehicle={vehicle}
+                    insurance={insurance}
+                    technicalInspection={technicalInspection}
+                    onInsuranceChange={setInsurance}
+                    onTechnicalChange={setTechnicalInspection}
+                    onChange={(updated, message) => { setVehicle(updated); setForm(updated); setSuccess(message); setError(null); }}
+                    onError={setError}
+                />
 
                 <footer className="sticky bottom-0 flex justify-end border-t bg-white/95 p-4 shadow-lg"><button disabled={saving} className="min-w-56 rounded-xl bg-amber-400 px-6 py-3 font-bold hover:bg-amber-500 disabled:opacity-50">{saving ? "Guardando..." : editing ? "Guardar cambios" : "Registrar vehículo"}</button></footer>
             </form>
@@ -108,30 +159,51 @@ export default function SupervisorVehicleFormPage() {
     </div>;
 }
 
-function LegalDocuments({ vehicle, onChange, onError }: { vehicle: SupervisorVehicle; onChange: (vehicle: SupervisorVehicle, message: string) => void; onError: (message: string | null) => void }) {
+function LegalDocuments({ vehicle, insurance, technicalInspection, onInsuranceChange, onTechnicalChange, onChange, onError }: {
+    vehicle: SupervisorVehicle | null;
+    insurance: LegalDocumentDraft;
+    technicalInspection: LegalDocumentDraft;
+    onInsuranceChange: (draft: LegalDocumentDraft) => void;
+    onTechnicalChange: (draft: LegalDocumentDraft) => void;
+    onChange: (vehicle: SupervisorVehicle, message: string) => void;
+    onError: (message: string | null) => void;
+}) {
+    const saveExisting = async (draft: LegalDocumentDraft, kind: "insurance" | "technical") => {
+        if (!vehicle || !draft.file) throw new Error("Adjunta el documento antes de guardar");
+        const uploaded = await storageService.uploadFile(draft.file, "vehiculos", vehicle.id);
+        return kind === "insurance"
+            ? supervisorVehiclesService.addInsurance(vehicle.id, draftToInput(draft, uploaded.objectKey))
+            : supervisorVehiclesService.addTechnicalInspection(vehicle.id, draftToInput(draft, uploaded.objectKey));
+    };
+
     return <Card title="Documentación legal" description="Los documentos se guardan de forma privada y se abren mediante enlaces temporales.">
-        <div className="mb-5"><DocumentStatusBadge status={vehicle.documentationStatus} /><span className="ml-3 text-sm text-gray-600">{vehicle.availableForJourney ? "Disponible para iniciar jornada" : "No disponible para conductores hasta completar documentos vigentes"}</span></div>
+        {vehicle
+            ? <div className="mb-5"><DocumentStatusBadge status={vehicle.documentationStatus} /><span className="ml-3 text-sm text-gray-600">{vehicle.availableForJourney ? "Disponible para iniciar jornada" : "No disponible para conductores hasta completar documentos vigentes"}</span></div>
+            : <p className="mb-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-800">Adjunta ambos documentos. Al registrar, el sistema creará el vehículo y guardará su documentación automáticamente.</p>}
         <div className="grid gap-6 xl:grid-cols-2">
-            <LegalDocumentForm title="Seguro del vehículo" vehicleId={vehicle.id} includeProvider onSave={async (input) => supervisorVehiclesService.addInsurance(vehicle.id, input)} onChange={(updated) => onChange(updated, "Seguro registrado correctamente")} onError={onError} />
-            <LegalDocumentForm title="Revisión técnico-mecánica" vehicleId={vehicle.id} onSave={async (input) => supervisorVehiclesService.addTechnicalInspection(vehicle.id, input)} onChange={(updated) => onChange(updated, "Revisión técnico-mecánica registrada correctamente")} onError={onError} />
+            <LegalDocumentForm title="Seguro del vehículo" draft={insurance} onDraftChange={onInsuranceChange} includeProvider onSave={vehicle ? async () => { const updated = await saveExisting(insurance, "insurance"); onInsuranceChange(emptyDocument()); onChange(updated, "Seguro registrado correctamente"); } : undefined} onError={onError} />
+            <LegalDocumentForm title="Revisión técnico-mecánica" draft={technicalInspection} onDraftChange={onTechnicalChange} onSave={vehicle ? async () => { const updated = await saveExisting(technicalInspection, "technical"); onTechnicalChange(emptyDocument()); onChange(updated, "Revisión técnico-mecánica registrada correctamente"); } : undefined} onError={onError} />
         </div>
-        <div className="mt-6 grid gap-6 xl:grid-cols-2"><History title="Historial de seguros" rows={vehicle.insurances.map((item) => ({ id: item.id, name: item.policyNumber, expiresAt: item.expiresAt, status: item.status, url: item.document?.downloadUrl }))} /><History title="Historial técnico-mecánico" rows={vehicle.technicalInspections.map((item) => ({ id: item.id, name: item.number, expiresAt: item.expiresAt, status: item.status, url: item.document?.downloadUrl }))} /></div>
+        {vehicle && <div className="mt-6 grid gap-6 xl:grid-cols-2"><History title="Historial de seguros" rows={vehicle.insurances.map((item) => ({ id: item.id, name: item.policyNumber, expiresAt: item.expiresAt, status: item.status, url: item.document?.downloadUrl }))} /><History title="Historial técnico-mecánico" rows={vehicle.technicalInspections.map((item) => ({ id: item.id, name: item.number, expiresAt: item.expiresAt, status: item.status, url: item.document?.downloadUrl }))} /></div>}
     </Card>;
 }
 
-function LegalDocumentForm({ title, vehicleId, includeProvider = false, onSave, onChange, onError }: { title: string; vehicleId: number; includeProvider?: boolean; onSave: (input: VehicleLegalDocumentInput) => Promise<SupervisorVehicle>; onChange: (vehicle: SupervisorVehicle) => void; onError: (message: string | null) => void }) {
-    const [number, setNumber] = useState(""); const [type, setType] = useState(""); const [provider, setProvider] = useState(""); const [validFrom, setValidFrom] = useState(""); const [expiresAt, setExpiresAt] = useState(""); const [price, setPrice] = useState(""); const [file, setFile] = useState<File | null>(null); const [saving, setSaving] = useState(false);
+function draftToInput(draft: LegalDocumentDraft, objectKey: string): VehicleLegalDocumentInput {
+    return { number: draft.number, type: draft.type || null, provider: draft.provider || null, validFrom: draft.validFrom || null, expiresAt: draft.expiresAt, price: draft.price ? Number(draft.price) : null, objectKey, fileName: draft.file?.name ?? "documento.pdf" };
+}
+
+function LegalDocumentForm({ title, draft, onDraftChange, includeProvider = false, onSave, onError }: { title: string; draft: LegalDocumentDraft; onDraftChange: (draft: LegalDocumentDraft) => void; includeProvider?: boolean; onSave?: () => Promise<void>; onError: (message: string | null) => void }) {
+    const [saving, setSaving] = useState(false);
+    const setDraft = <K extends keyof LegalDocumentDraft>(key: K, value: LegalDocumentDraft[K]) => onDraftChange({ ...draft, [key]: value });
     const submit = async () => {
-        if (!file) { onError("Adjunta el documento antes de guardar"); return; }
+        if (!onSave) return;
+        if (!draft.file) { onError("Adjunta el documento antes de guardar"); return; }
         setSaving(true); onError(null);
-        try {
-            const uploaded = await storageService.uploadFile(file, "vehiculos", vehicleId);
-            const updated = await onSave({ number, type: type || null, provider: provider || null, validFrom: validFrom || null, expiresAt, price: price ? Number(price) : null, objectKey: uploaded.objectKey, fileName: file.name });
-            onChange(updated); setNumber(""); setType(""); setProvider(""); setValidFrom(""); setExpiresAt(""); setPrice(""); setFile(null);
-        } catch (reason) { onError(reason instanceof Error ? reason.message : "No fue posible guardar el documento"); }
+        try { await onSave(); }
+        catch (reason) { onError(reason instanceof Error ? reason.message : "No fue posible guardar el documento"); }
         finally { setSaving(false); }
     };
-    return <section className="rounded-2xl border p-5"><h3 className="font-bold">{title}</h3><div className="mt-4 grid gap-3 sm:grid-cols-2"><Field label="Número *"><input value={number} onChange={(e) => setNumber(e.target.value)} className="control" /></Field>{includeProvider && <><Field label="Tipo de póliza"><input value={type} onChange={(e) => setType(e.target.value)} className="control" /></Field><Field label="Aseguradora"><input value={provider} onChange={(e) => setProvider(e.target.value)} className="control" /></Field></>}<Field label="Inicio de vigencia"><input type="date" value={validFrom} onChange={(e) => setValidFrom(e.target.value)} className="control" /></Field><Field label="Vencimiento *"><input required type="date" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} className="control" /></Field><Field label="Valor"><input min={0} type="number" value={price} onChange={(e) => setPrice(e.target.value)} className="control" /></Field><Field label="Documento PDF *"><input type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="control" /></Field></div><button type="button" disabled={saving || !number || !expiresAt || !file} onClick={submit} className="mt-4 w-full rounded-xl bg-amber-400 px-4 py-3 font-semibold disabled:opacity-50">{saving ? "Guardando documento..." : "Guardar documento"}</button></section>;
+    return <section className="rounded-2xl border p-5"><h3 className="font-bold">{title}</h3><div className="mt-4 grid gap-3 sm:grid-cols-2"><Field label="Número *"><input required={!onSave} value={draft.number} onChange={(e) => setDraft("number", e.target.value)} className="control" /></Field>{includeProvider && <><Field label="Tipo de póliza"><input value={draft.type} onChange={(e) => setDraft("type", e.target.value)} className="control" /></Field><Field label="Aseguradora"><input value={draft.provider} onChange={(e) => setDraft("provider", e.target.value)} className="control" /></Field></>}<Field label="Inicio de vigencia"><input type="date" value={draft.validFrom} onChange={(e) => setDraft("validFrom", e.target.value)} className="control" /></Field><Field label="Vencimiento *"><input required={!onSave} type="date" value={draft.expiresAt} onChange={(e) => setDraft("expiresAt", e.target.value)} className="control" /></Field><Field label="Valor"><input min={0} type="number" value={draft.price} onChange={(e) => setDraft("price", e.target.value)} className="control" /></Field><Field label="Documento PDF *"><input key={draft.file?.name ?? "empty"} required={!onSave} type="file" accept="application/pdf" onChange={(e) => setDraft("file", e.target.files?.[0] ?? null)} className="control" /></Field></div>{onSave && <button type="button" disabled={saving || !draft.number || !draft.expiresAt || !draft.file} onClick={submit} className="mt-4 w-full rounded-xl bg-amber-400 px-4 py-3 font-semibold disabled:opacity-50">{saving ? "Guardando documento..." : "Guardar documento"}</button>}</section>;
 }
 
 function History({ title, rows }: { title: string; rows: Array<{ id: number; name: string; expiresAt: string | null; status: DocumentStatus; url?: string }> }) { return <section><h3 className="mb-3 font-bold">{title}</h3><div className="space-y-2">{rows.length === 0 ? <p className="rounded-xl bg-gray-50 p-4 text-sm text-gray-500">Sin registros.</p> : rows.map((row) => <div key={row.id} className="flex items-center justify-between gap-3 rounded-xl border p-3"><div><p className="font-medium">{row.name}</p><p className="text-xs text-gray-500">Vence: {row.expiresAt ?? "Sin fecha"}</p></div><div className="flex items-center gap-2"><DocumentStatusBadge status={row.status} />{row.url && <a href={row.url} target="_blank" rel="noreferrer" className="rounded-lg border px-3 py-2 text-sm font-semibold">Abrir PDF</a>}</div></div>)}</div></section>; }

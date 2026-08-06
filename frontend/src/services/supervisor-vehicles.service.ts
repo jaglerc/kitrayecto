@@ -44,7 +44,6 @@ export interface VehicleListResult { items: SupervisorVehicle[]; total: number; 
 const API = (import.meta.env.VITE_API_URL ?? "http://localhost:3000").replace(/\/+$/, "");
 const headers = (): HeadersInit => ({ "Content-Type": "application/json", ...(localStorage.getItem("token") ? { Authorization: `Bearer ${localStorage.getItem("token")}` } : {}) });
 const message = async (response: Response, fallback: string): Promise<string> => { try { return ((await response.json()) as { message?: string }).message ?? fallback; } catch { return fallback; } };
-
 export const supervisorVehiclesService = {
     async list(input: { search?: string; type?: VehicleType | ""; active?: "" | "true" | "false"; page?: number } = {}): Promise<VehicleListResult> {
         const query = new URLSearchParams({ page: String(input.page ?? 1), pageSize: "12" });
