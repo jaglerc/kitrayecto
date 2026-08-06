@@ -18,7 +18,6 @@ export interface CreateSupervisorUserInput {
     ciudadExpedicionDocumento: string | null;
     eps: string | null;
     telefono: string | null;
-    requiereManipulacionAlimentos: boolean;
     categoriaLicencia: string | null;
     vencimientoLicencia: string | null;
     role: UserRole;
@@ -38,8 +37,6 @@ export interface CreatedSupervisorUser {
 export interface CreateSupervisorUserDocumentInput {
     tipoDocumento: SupervisorDocumentType;
     objectKey: string;
-    fechaVigencia: string | null;
-    fechaVencimiento: string | null;
 }
 
 export interface CreatedSupervisorUserDocument {
@@ -47,4 +44,44 @@ export interface CreatedSupervisorUserDocument {
     tipoDocumento: SupervisorDocumentType;
     objectKey: string;
     nombreArchivo: string;
+}
+
+export interface SupervisorUserDetail extends CreatedSupervisorUser {
+    fechaExpedicionDocumento: string | null;
+    ciudadExpedicionDocumento: string | null;
+    eps: string | null;
+    telefono: string | null;
+    categoriaLicencia: string | null;
+    vencimientoLicencia: string | null;
+    createdAt: string | null;
+    documents: CreatedSupervisorUserDocument[];
+}
+
+export interface UpdateSupervisorUserInput {
+    cedula: string;
+    nombre: string;
+    segundoNombre: string | null;
+    apellido: string;
+    fechaExpedicionDocumento: string | null;
+    ciudadExpedicionDocumento: string | null;
+    eps: string | null;
+    telefono: string | null;
+    categoriaLicencia: string | null;
+    vencimientoLicencia: string | null;
+    role: UserRole;
+}
+
+export interface SupervisorUserListInput {
+    search: string;
+    role: UserRole | null;
+    estado: boolean | null;
+    page: number;
+    pageSize: number;
+}
+
+export interface SupervisorUserListResult {
+    items: CreatedSupervisorUser[];
+    total: number;
+    page: number;
+    pageSize: number;
 }

@@ -4,24 +4,22 @@ import type { SupervisorDocumentType } from "../../services/supervisor-users.ser
 export interface SupervisorDocumentValue {
     type: SupervisorDocumentType;
     file: File | null;
-    validFrom: string;
-    validUntil: string;
 }
 
 interface SupervisorDocumentFieldProps {
     label: string;
     value: SupervisorDocumentValue;
     onChange: (value: SupervisorDocumentValue) => void;
-    showValidity?: boolean;
     required?: boolean;
+    status?: "idle" | "uploading" | "uploaded" | "error";
 }
 
 export default function SupervisorDocumentField({
     label,
     value,
     onChange,
-    showValidity = false,
     required = false,
+    status = "idle",
 }: SupervisorDocumentFieldProps) {
     return (
         <article className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
@@ -31,7 +29,7 @@ export default function SupervisorDocumentField({
                         {label} {required && <span className="text-red-500">*</span>}
                     </h3>
                     <p className="mt-1 text-xs text-gray-500">
-                        Imagen o PDF, máximo 2.5 MB.
+                        Imagen hasta 2.5 MB o PDF hasta 50 MB.
                     </p>
                 </div>
 
@@ -53,39 +51,14 @@ export default function SupervisorDocumentField({
             </div>
 
             {value.file && (
-                <p className="mt-3 truncate rounded-lg bg-white px-3 py-2 text-xs text-gray-600">
-                    {value.file.name}
-                </p>
-            )}
-
-            {showValidity && (
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    <label className="text-xs font-medium text-gray-700">
-                        Vigente desde
-                        <input
-                            type="date"
-                            value={value.validFrom}
-                            onChange={(event) => onChange({
-                                ...value,
-                                validFrom: event.target.value,
-                            })}
-                            className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 outline-none focus:border-amber-400"
-                        />
-                    </label>
-                    <label className="text-xs font-medium text-gray-700">
-                        Vigente hasta
-                        <input
-                            type="date"
-                            value={value.validUntil}
-                            onChange={(event) => onChange({
-                                ...value,
-                                validUntil: event.target.value,
-                            })}
-                            className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 outline-none focus:border-amber-400"
-                        />
-                    </label>
+                <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2 text-xs">
+                    <p className="min-w-0 truncate text-gray-600">{value.file.name}</p>
+                    {status === "uploading" && <span className="shrink-0 text-amber-600">Subiendo...</span>}
+                    {status === "uploaded" && <span className="shrink-0 text-emerald-700">Guardado</span>}
+                    {status === "error" && <span className="shrink-0 text-red-600">No guardado</span>}
                 </div>
             )}
+
         </article>
     );
 }
