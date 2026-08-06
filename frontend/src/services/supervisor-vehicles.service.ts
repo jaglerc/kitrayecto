@@ -39,7 +39,7 @@ export interface SupervisorVehicle extends SupervisorVehicleInput {
     technicalInspections: VehicleTechnicalInspection[];
 }
 
-export interface VehicleListResult { items: SupervisorVehicle[]; total: number; page: number; pageSize: number; }
+export interface VehicleListResult { items: SupervisorVehicle[]; total: number; page: number; pageSize: number; message: string; }
 
 const API = (import.meta.env.VITE_API_URL ?? "http://localhost:3000").replace(/\/+$/, "");
 const headers = (): HeadersInit => ({ "Content-Type": "application/json", ...(localStorage.getItem("token") ? { Authorization: `Bearer ${localStorage.getItem("token")}` } : {}) });

@@ -128,7 +128,7 @@ const select = `
     LEFT JOIN LATERAL (
         SELECT r.fecha_expiracion_tecnomecanica,
                EXISTS (SELECT 1 FROM documentos_tecnomecanica dt WHERE dt.tecnico_id = r.id) AS documentado
-        FROM revisiones_tecnomecanicas r WHERE r.carro_id = v.id
+        FROM revisiones_tecnicomecanicas r WHERE r.carro_id = v.id
         ORDER BY r.fecha_expiracion_tecnomecanica DESC NULLS LAST, r.id DESC LIMIT 1
     ) rt ON TRUE`;
 
@@ -175,7 +175,19 @@ export class SupervisorVehiclesRepository {
         const count = await pool.query<{ total: string }>(`SELECT COUNT(*)::text AS total FROM vehiculo v ${where}`, values);
         const offset = (input.page - 1) * input.pageSize;
         const result = await pool.query<VehicleRow>(`${select} ${where} ORDER BY v.placa LIMIT $${values.length + 1} OFFSET $${values.length + 2}`, [...values, input.pageSize, offset]);
-        return { items: result.rows.map(mapRow), total: Number(count.rows[0]?.total ?? 0), page: input.page, pageSize: input.pageSize };
+        const total = Number(count.rows[0]?.total ?? 0);
+        const hasFilters = Boolean(input.search || input.type || input.active !== null);
+        return {
+            items: result.rows.map(mapRow),
+            total,
+            page: input.page,
+            pageSize: input.pageSize,
+            message: total > 0
+                ? "Vehículos consultados correctamente"
+                : hasFilters
+                    ? "No se encontraron vehículos con los filtros seleccionados"
+                    : "No hay vehículos registrados",
+        };
     }
 
     static async findById(vehicleId: number): Promise<SupervisorVehicleDetail | null> {
@@ -193,7 +205,7 @@ export class SupervisorVehiclesRepository {
                 `SELECT r.id, r.numero_tecnomecanica, r.fecha_vigencia_tecnomecanica::text,
                         r.fecha_expiracion_tecnomecanica::text, r.precio_tecnicomecanica,
                         d.id AS documento_id, d.s3_ruta, d.nombre_archivo, d.created_at::text AS documento_created_at
-                 FROM revisiones_tecnomecanicas r
+                 FROM revisiones_tecnicomecanicas r
                  LEFT JOIN LATERAL (SELECT * FROM documentos_tecnomecanica WHERE tecnico_id = r.id ORDER BY id DESC LIMIT 1) d ON TRUE
                  WHERE r.carro_id = $1 ORDER BY r.fecha_expiracion_tecnomecanica DESC NULLS LAST, r.id DESC`, [vehicleId]),
         ]);
