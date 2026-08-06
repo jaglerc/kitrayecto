@@ -29,7 +29,7 @@ const navigationItems: Array<{
 }> = [
     { id: "inicio", icon: homeIcon, label: "Inicio", path: "/supervisor" },
     { id: "usuarios", icon: usersIcon, label: "Usuarios", path: "/supervisor/users" },
-    { id: "vehiculos", icon: vehicleIcon, label: "Vehículos" },
+    { id: "vehiculos", icon: vehicleIcon, label: "Vehículos", path: "/supervisor/vehicles" },
     { id: "documentos", icon: documentIcon, label: "Documentos" },
     { id: "roles", icon: shieldIcon, label: "Roles y permisos" },
     { id: "notificaciones", icon: bellIcon, label: "Notificaciones" },
