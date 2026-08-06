@@ -20,13 +20,16 @@ import AccidentFormPage from "./pages/AccidentFormPage";
 import ConsultationsPage from "./pages/ConsultationsPage";
 import ConsultationListPage from "./pages/ConsultationListPage";
 import ConsultationDetailPage from "./pages/ConsultationDetailPage";
+import SupervisorDashboardPage from "./pages/SupervisorDashboardPage";
+import RoleRoute from "./components/auth/RoleRoute";
 function App() {
     return (
         <BrowserRouter>
             <Routes>
                 <Route path="/" element={<Navigate to="/login" replace />} />
                 <Route path="/login" element={<Login />}/>
-                <Route path="/home" element={<Home />} />
+                <Route path="/home" element={<RoleRoute allowedRoles={["Conductor"]}><Home /></RoleRoute>} />
+                <Route path="/supervisor" element={<RoleRoute allowedRoles={["Supervisor", "Administrador"]}><SupervisorDashboardPage /></RoleRoute>} />
                 <Route path="/StartJourneyPage" element={<StartJourneyPage/> }/>
                 <Route path="/inspections/:inspectionId" element={<InspectionDetailPage />} />
                 <Route path="/inspections/:inspectionId/answers/:answerId" element={<InspectionAnswerDetailPage />} />
