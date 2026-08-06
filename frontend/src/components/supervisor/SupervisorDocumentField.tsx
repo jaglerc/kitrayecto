@@ -1,0 +1,91 @@
+import uploadIcon from "../../icons/supervisor/upload.svg";
+import type { SupervisorDocumentType } from "../../services/supervisor-users.service";
+
+export interface SupervisorDocumentValue {
+    type: SupervisorDocumentType;
+    file: File | null;
+    validFrom: string;
+    validUntil: string;
+}
+
+interface SupervisorDocumentFieldProps {
+    label: string;
+    value: SupervisorDocumentValue;
+    onChange: (value: SupervisorDocumentValue) => void;
+    showValidity?: boolean;
+    required?: boolean;
+}
+
+export default function SupervisorDocumentField({
+    label,
+    value,
+    onChange,
+    showValidity = false,
+    required = false,
+}: SupervisorDocumentFieldProps) {
+    return (
+        <article className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <h3 className="text-sm font-semibold text-gray-900">
+                        {label} {required && <span className="text-red-500">*</span>}
+                    </h3>
+                    <p className="mt-1 text-xs text-gray-500">
+                        Imagen o PDF, máximo 2.5 MB.
+                    </p>
+                </div>
+
+                <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-emerald-300 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50">
+                    <img src={uploadIcon} alt="" aria-hidden="true" className="h-5 w-5" />
+                    {value.file ? "Cambiar archivo" : "Seleccionar archivo"}
+                    <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,application/pdf"
+                        className="sr-only"
+                        onChange={(event) => {
+                            onChange({
+                                ...value,
+                                file: event.target.files?.[0] ?? null,
+                            });
+                        }}
+                    />
+                </label>
+            </div>
+
+            {value.file && (
+                <p className="mt-3 truncate rounded-lg bg-white px-3 py-2 text-xs text-gray-600">
+                    {value.file.name}
+                </p>
+            )}
+
+            {showValidity && (
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <label className="text-xs font-medium text-gray-700">
+                        Vigente desde
+                        <input
+                            type="date"
+                            value={value.validFrom}
+                            onChange={(event) => onChange({
+                                ...value,
+                                validFrom: event.target.value,
+                            })}
+                            className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 outline-none focus:border-amber-400"
+                        />
+                    </label>
+                    <label className="text-xs font-medium text-gray-700">
+                        Vigente hasta
+                        <input
+                            type="date"
+                            value={value.validUntil}
+                            onChange={(event) => onChange({
+                                ...value,
+                                validUntil: event.target.value,
+                            })}
+                            className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 outline-none focus:border-amber-400"
+                        />
+                    </label>
+                </div>
+            )}
+        </article>
+    );
+}

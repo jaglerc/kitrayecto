@@ -25,9 +25,10 @@ const navigationItems: Array<{
     id: SupervisorOption;
     icon: string;
     label: string;
+    path?: string;
 }> = [
-    { id: "inicio", icon: homeIcon, label: "Inicio" },
-    { id: "usuarios", icon: usersIcon, label: "Usuarios" },
+    { id: "inicio", icon: homeIcon, label: "Inicio", path: "/supervisor" },
+    { id: "usuarios", icon: usersIcon, label: "Usuarios", path: "/supervisor/users/new" },
     { id: "vehiculos", icon: vehicleIcon, label: "Vehículos" },
     { id: "documentos", icon: documentIcon, label: "Documentos" },
     { id: "roles", icon: shieldIcon, label: "Roles y permisos" },
@@ -64,13 +65,14 @@ export default function SupervisorSidebar({
             <nav className="mt-5 space-y-2">
                 {navigationItems.map((item) => {
                     const isActive = item.id === active;
-                    const isAvailable = item.id === "inicio";
+                    const isAvailable = Boolean(item.path);
 
                     return (
                         <button
                             key={item.id}
                             type="button"
                             disabled={!isAvailable}
+                            onClick={() => item.path && navigate(item.path)}
                             title={!isAvailable ? "Se desarrollará en el siguiente módulo" : undefined}
                             className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm transition ${
                                 isActive

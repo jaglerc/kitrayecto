@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
 
 import SupervisorSidebar from "../components/supervisor/SupervisorSidebar";
 import SupervisorStatCard from "../components/supervisor/SupervisorStatCard";
@@ -26,6 +27,7 @@ const quickActions = [
         icon: userAddIcon,
         title: "Crear usuario",
         description: "Agregar un nuevo usuario al sistema",
+        path: "/supervisor/users/new",
     },
     {
         icon: vehicleAddIcon,
@@ -57,6 +59,7 @@ const getStoredUser = (): StoredUser | null => {
 };
 
 export default function SupervisorDashboardPage() {
+    const navigate = useNavigate();
     const [dashboard, setDashboard] = useState<SupervisorDashboard>(emptyDashboard);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -141,9 +144,14 @@ export default function SupervisorDashboardPage() {
                             <button
                                 key={action.title}
                                 type="button"
-                                disabled
-                                title="Se habilitará al desarrollar este módulo"
-                                className="flex items-center gap-4 rounded-xl border border-gray-100 p-4 text-left opacity-70"
+                                disabled={!action.path}
+                                onClick={() => action.path && navigate(action.path)}
+                                title={
+                                    action.path
+                                        ? action.title
+                                        : "Se habilitará al desarrollar este módulo"
+                                }
+                                className="flex items-center gap-4 rounded-xl border border-gray-100 p-4 text-left hover:border-amber-300 hover:bg-amber-50/40 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-amber-50">
                                     <img
