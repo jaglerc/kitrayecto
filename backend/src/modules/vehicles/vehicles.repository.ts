@@ -16,6 +16,7 @@ export class VehiclesRepository {
                 placa
             FROM vehiculo
             WHERE tipo_vehiculo::text = $1
+              AND estado = TRUE
             ORDER BY placa
             `,
             [type]

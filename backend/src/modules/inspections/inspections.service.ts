@@ -117,7 +117,16 @@ export class InspectionsService {
             "Sin novedad"
         );
 
-        return InspectionsRepository.create(conductorId, input.vehicleId, input.operation, overallStatus, input.mileage, input.answers, templatesById);
+        try {
+            return await InspectionsRepository.create(conductorId, input.vehicleId, input.operation, overallStatus, input.mileage, input.answers, templatesById);
+        } catch (error) {
+            if (error instanceof Error && error.message === "MILEAGE_LOWER_THAN_CURRENT") {
+                throw new InspectionValidationError(
+                    "El kilometraje no puede ser menor al registrado actualmente para el vehículo"
+                );
+            }
+            throw error;
+        }
     }
 
     static async findToday(conductorId: number): Promise<import("./inspections.types.js").TodayInspection | null> {
