@@ -33,6 +33,22 @@ interface FormState {
     password: string;
 }
 
+type DocumentUploadStatus = "idle" | "uploading" | "uploaded" | "error";
+
+const documentLabels: Record<SupervisorDocumentType, string> = {
+    Foto: "Foto",
+    Licencia_conduccion: "Licencia de conducción",
+    Cedula: "Cédula",
+    Certificado_manipulacion_alimentos: "Certificado de manipulación de alimentos",
+};
+
+const initialUploadStatuses = (): Record<SupervisorDocumentType, DocumentUploadStatus> => ({
+    Foto: "idle",
+    Licencia_conduccion: "idle",
+    Cedula: "idle",
+    Certificado_manipulacion_alimentos: "idle",
+});
+
 const initialForm: FormState = {
     apellido: "",
     nombre: "",
@@ -76,6 +92,7 @@ export default function SupervisorCreateUserPage() {
     const currentUser = getStoredUser();
     const [form, setForm] = useState<FormState>(initialForm);
     const [documents, setDocuments] = useState(initialDocuments);
+    const [uploadStatuses, setUploadStatuses] = useState(initialUploadStatuses);
     const [createdUserId, setCreatedUserId] = useState<number | null>(null);
     const uploadedTypes = useRef(new Set<SupervisorDocumentType>());
     const [isSaving, setIsSaving] = useState(false);
@@ -92,6 +109,8 @@ export default function SupervisorCreateUserPage() {
         value: SupervisorDocumentValue
     ) => {
         setDocuments((current) => ({ ...current, [type]: value }));
+        uploadedTypes.current.delete(type);
+        setUploadStatuses((current) => ({ ...current, [type]: "idle" }));
         setError(null);
     };
 
@@ -109,21 +128,45 @@ export default function SupervisorCreateUserPage() {
             (document) => document.file && !uploadedTypes.current.has(document.type)
         );
 
+        const failures: string[] = [];
+
         for (const document of selected) {
             if (!document.file) continue;
 
-            const uploaded = await storageService.uploadFile(
-                document.file,
-                "usuarios",
-                userId
-            );
+            setUploadStatuses((current) => ({
+                ...current,
+                [document.type]: "uploading",
+            }));
 
-            await supervisorUsersService.createDocument(userId, {
-                tipoDocumento: document.type,
-                objectKey: uploaded.objectKey,
-            });
+            try {
+                const uploaded = await storageService.uploadFile(
+                    document.file,
+                    "usuarios",
+                    userId
+                );
 
-            uploadedTypes.current.add(document.type);
+                await supervisorUsersService.createDocument(userId, {
+                    tipoDocumento: document.type,
+                    objectKey: uploaded.objectKey,
+                });
+
+                uploadedTypes.current.add(document.type);
+                setUploadStatuses((current) => ({
+                    ...current,
+                    [document.type]: "uploaded",
+                }));
+            } catch (reason) {
+                setUploadStatuses((current) => ({
+                    ...current,
+                    [document.type]: "error",
+                }));
+                const detail = reason instanceof Error ? reason.message : "Error desconocido";
+                failures.push(`${documentLabels[document.type]}: ${detail}`);
+            }
+        }
+
+        if (failures.length > 0) {
+            throw new Error(`No se pudieron guardar algunos documentos. ${failures.join(" | ")}`);
         }
     };
 
@@ -162,6 +205,7 @@ export default function SupervisorCreateUserPage() {
             setSuccess("Usuario y documentos registrados correctamente.");
             setForm(initialForm);
             setDocuments(initialDocuments());
+            setUploadStatuses(initialUploadStatuses());
             setCreatedUserId(null);
             uploadedTypes.current.clear();
         } catch (reason) {
@@ -256,11 +300,11 @@ export default function SupervisorCreateUserPage() {
 
                     <FormSection title="Documentos">
                         <div className="grid gap-4 xl:grid-cols-2">
-                            <SupervisorDocumentField label="Foto" value={documents.Foto} onChange={(value) => updateDocument("Foto", value)} />
-                            <SupervisorDocumentField label="Licencia de conducción" value={documents.Licencia_conduccion} onChange={(value) => updateDocument("Licencia_conduccion", value)} />
-                            <SupervisorDocumentField label="Cédula" value={documents.Cedula} onChange={(value) => updateDocument("Cedula", value)} />
+                            <SupervisorDocumentField label="Foto" value={documents.Foto} status={uploadStatuses.Foto} onChange={(value) => updateDocument("Foto", value)} />
+                            <SupervisorDocumentField label="Licencia de conducción" value={documents.Licencia_conduccion} status={uploadStatuses.Licencia_conduccion} onChange={(value) => updateDocument("Licencia_conduccion", value)} />
+                            <SupervisorDocumentField label="Cédula" value={documents.Cedula} status={uploadStatuses.Cedula} onChange={(value) => updateDocument("Cedula", value)} />
                             {form.requiereManipulacionAlimentos && (
-                                <SupervisorDocumentField label="Certificado de manipulación de alimentos" value={documents.Certificado_manipulacion_alimentos} onChange={(value) => updateDocument("Certificado_manipulacion_alimentos", value)} required />
+                                <SupervisorDocumentField label="Certificado de manipulación de alimentos" value={documents.Certificado_manipulacion_alimentos} status={uploadStatuses.Certificado_manipulacion_alimentos} onChange={(value) => updateDocument("Certificado_manipulacion_alimentos", value)} required />
                             )}
                         </div>
                     </FormSection>
