@@ -106,4 +106,5 @@ export interface SupervisorVehicleListResult {
     total: number;
     page: number;
     pageSize: number;
+    message: string;
 }
