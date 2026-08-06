@@ -40,6 +40,7 @@ export default function QuickActions({ tripStatus, onFinishTrip, onReportAcciden
                     titulo="Mantenimiento"
                     descripcion="Reportar mantenimiento"
                     img={mantenimiento}
+                    onClick={() => navigate("/maintenance")}
                 />
                 <ActionCard
                     titulo="Accidente"

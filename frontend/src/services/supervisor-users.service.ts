@@ -41,6 +41,7 @@ export interface SupervisorUserDocument {
     tipoDocumento: SupervisorDocumentType;
     objectKey: string;
     nombreArchivo: string;
+    downloadUrl?: string;
 }
 
 export interface SupervisorUserDetail extends CreatedSupervisorUser {
