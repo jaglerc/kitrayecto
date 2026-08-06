@@ -11,6 +11,7 @@ interface SupervisorDocumentFieldProps {
     value: SupervisorDocumentValue;
     onChange: (value: SupervisorDocumentValue) => void;
     required?: boolean;
+    status?: "idle" | "uploading" | "uploaded" | "error";
 }
 
 export default function SupervisorDocumentField({
@@ -18,6 +19,7 @@ export default function SupervisorDocumentField({
     value,
     onChange,
     required = false,
+    status = "idle",
 }: SupervisorDocumentFieldProps) {
     return (
         <article className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
@@ -49,9 +51,12 @@ export default function SupervisorDocumentField({
             </div>
 
             {value.file && (
-                <p className="mt-3 truncate rounded-lg bg-white px-3 py-2 text-xs text-gray-600">
-                    {value.file.name}
-                </p>
+                <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2 text-xs">
+                    <p className="min-w-0 truncate text-gray-600">{value.file.name}</p>
+                    {status === "uploading" && <span className="shrink-0 text-amber-600">Subiendo...</span>}
+                    {status === "uploaded" && <span className="shrink-0 text-emerald-700">Guardado</span>}
+                    {status === "error" && <span className="shrink-0 text-red-600">No guardado</span>}
+                </div>
             )}
 
         </article>
