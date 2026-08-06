@@ -1,2 +1,24 @@
-interface SupervisorStatCardProps { icon: string; label: string; value: number; }
-export default function SupervisorStatCard({icon,label,value}:SupervisorStatCardProps){return <article className="flex items-center gap-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"><span aria-hidden="true" className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-50 text-2xl">{icon}</span><div><p className="text-sm text-gray-600">{label}</p><p className="mt-1 text-3xl font-bold text-gray-900">{value}</p></div></article>}
+interface SupervisorStatCardProps {
+    icon: string;
+    label: string;
+    value: number;
+}
+
+export default function SupervisorStatCard({
+    icon,
+    label,
+    value,
+}: SupervisorStatCardProps) {
+    return (
+        <article className="flex items-center gap-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-50">
+                <img src={icon} alt="" aria-hidden="true" className="h-8 w-8" />
+            </span>
+
+            <div>
+                <p className="text-sm text-gray-600">{label}</p>
+                <p className="mt-1 text-3xl font-bold text-gray-900">{value}</p>
+            </div>
+        </article>
+    );
+}
