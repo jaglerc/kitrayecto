@@ -118,12 +118,16 @@ export class SupervisorVehiclesService {
             transitLicense: optionalText(input.transitLicense),
             brand: optionalText(input.brand),
             owner: optionalText(input.owner),
+            registrationDate: input.registrationDate.trim(),
         };
     }
 
     private static async validate(input: SupervisorVehicleInput): Promise<void> {
         if (!this.isVehicleType(input.type) || !input.databaseType) throw new SupervisorVehicleValidationError("El tipo de vehículo no es válido");
         if (!/^[A-Z0-9-]{3,12}$/.test(input.plate)) throw new SupervisorVehicleValidationError("La placa no es válida");
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(input.registrationDate) || input.registrationDate > new Date().toISOString().slice(0, 10)) {
+            throw new SupervisorVehicleValidationError("La fecha de matrícula no es válida");
+        }
         if (input.currentMileage !== null && (!Number.isFinite(input.currentMileage) || input.currentMileage < 0)) throw new SupervisorVehicleValidationError("El kilometraje no es válido");
         if (input.oilControlEnabled) {
             if (!Number.isInteger(input.oilIntervalKm) || input.oilIntervalKm! < 500) throw new SupervisorVehicleValidationError("El intervalo de aceite debe ser de mínimo 500 km");

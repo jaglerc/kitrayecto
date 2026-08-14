@@ -85,10 +85,9 @@ export class SupervisorUsersService {
             throw new SupervisorUserValidationError("El rol no es válido");
         }
 
-        if (normalized.role === "Administrador" && actor.role !== "Administrador") {
-            throw new SupervisorUserForbiddenError(
-                "Solo un administrador puede crear otro administrador"
-            );
+        if (normalized.role !== "Conductor") {
+            normalized.categoriaLicencia = null;
+            normalized.vencimientoLicencia = null;
         }
 
         if (
@@ -117,8 +116,17 @@ export class SupervisorUsersService {
             throw new SupervisorUserValidationError("El usuario no es válido");
         }
 
-        if (!await SupervisorUsersRepository.existsById(userId)) {
-            throw new SupervisorUserNotFoundError("El usuario no existe");
+        const user = await SupervisorUsersRepository.findById(userId);
+        if (!user) throw new SupervisorUserNotFoundError("El usuario no existe");
+
+        if (
+            user.role !== "Conductor" &&
+            (input.tipoDocumento === "Licencia_conduccion" ||
+                input.tipoDocumento === "Certificado_manipulacion_alimentos")
+        ) {
+            throw new SupervisorUserValidationError(
+                "Este documento solo corresponde a usuarios conductores"
+            );
         }
 
         const expectedPath = `/usuarios/${userId}/${actor.id}/`;
@@ -162,17 +170,15 @@ export class SupervisorUsersService {
         if (!allowedRoles.includes(normalized.role)) {
             throw new SupervisorUserValidationError("El rol no es válido");
         }
-        if (normalized.role === "Administrador" && actor.role !== "Administrador") {
-            throw new SupervisorUserForbiddenError("Solo un administrador puede asignar ese rol");
+        if (normalized.role !== "Conductor") {
+            normalized.categoriaLicencia = null;
+            normalized.vencimientoLicencia = null;
         }
         if (!isIsoDate(normalized.fechaExpedicionDocumento) || !isIsoDate(normalized.vencimientoLicencia)) {
             throw new SupervisorUserValidationError("Una de las fechas no es válida");
         }
         const existing = await SupervisorUsersRepository.findById(userId);
         if (!existing) throw new SupervisorUserNotFoundError("El usuario no existe");
-        if (existing.role === "Administrador" && actor.role !== "Administrador") {
-            throw new SupervisorUserForbiddenError("No puedes modificar un administrador");
-        }
         if (await SupervisorUsersRepository.existsByCedulaExcept(normalized.cedula, userId)) {
             throw new SupervisorUserConflictError("Ya existe un usuario registrado con esta cédula");
         }
@@ -194,9 +200,6 @@ export class SupervisorUsersService {
         }
         const existing = await SupervisorUsersRepository.findById(userId);
         if (!existing) throw new SupervisorUserNotFoundError("El usuario no existe");
-        if (existing.role === "Administrador" && actor.role !== "Administrador") {
-            throw new SupervisorUserForbiddenError("No puedes gestionar un administrador");
-        }
         const updated = await SupervisorUsersRepository.updateStatus(userId, estado);
         if (!updated) throw new SupervisorUserNotFoundError("El usuario no existe");
         return updated;

@@ -23,6 +23,7 @@ const inputFrom = (body: Record<string, unknown>): SupervisorVehicleInput => ({
     fumigationRequired: body.fumigationRequired === true,
     fumigationFrequencyDays: numberOrNull(body.fumigationFrequencyDays),
     lastFumigationDate: nullableText(body.lastFumigationDate),
+    registrationDate: text(body.registrationDate),
 });
 
 const legalDocumentFrom = (body: Record<string, unknown>): VehicleLegalDocumentInput => ({

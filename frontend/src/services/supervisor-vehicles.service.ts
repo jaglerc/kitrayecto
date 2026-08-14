@@ -22,6 +22,7 @@ export interface SupervisorVehicleInput {
     fumigationRequired: boolean;
     fumigationFrequencyDays: number | null;
     lastFumigationDate: string | null;
+    registrationDate: string;
 }
 
 export interface SupervisorVehicle extends SupervisorVehicleInput {
@@ -33,6 +34,8 @@ export interface SupervisorVehicle extends SupervisorVehicleInput {
     nextOilChangeKm: number | null;
     fumigationStatus: FumigationStatus;
     nextFumigationDate: string | null;
+    technicalInspectionRequired: boolean;
+    technicalInspectionDueDate: string | null;
     documentationStatus: DocumentStatus;
     availableForJourney: boolean;
     insurances: VehicleInsurance[];
