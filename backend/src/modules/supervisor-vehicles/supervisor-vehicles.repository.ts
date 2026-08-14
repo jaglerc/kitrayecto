@@ -36,6 +36,7 @@ interface VehicleRow {
     seguro_documentado: boolean;
     tecnico_expira: string | null;
     tecnico_documentado: boolean;
+    fecha_matricula: string | null;
 }
 
 interface InsuranceRow { id: number; numero_poliza: string; tipo_poliza: string | null; fecha_vigencia_poliza: string | null; fecha_expiracion_poliza: string | null; precio_poliza: string | number | null; aseguradora: string | null; documento_id: number | null; s3_ruta: string | null; nombre_archivo: string | null; documento_created_at: string | null; }
@@ -48,7 +49,16 @@ const apiType = (value: string): SupervisorVehicleSummary["type"] => {
         : "camioneta";
 };
 
+const technicalRequirement = (registrationDate: string | null, type: SupervisorVehicleSummary["type"]): { required: boolean; dueDate: string | null } => {
+    if (!registrationDate) return { required: true, dueDate: null };
+    const due = new Date(`${registrationDate}T00:00:00Z`);
+    due.setUTCFullYear(due.getUTCFullYear() + (type === "motocicleta" || type === "motocarguero" ? 2 : 5));
+    const dueDate = due.toISOString().slice(0, 10);
+    return { required: new Date().toISOString().slice(0, 10) >= dueDate, dueDate };
+};
+
 const mapRow = (row: VehicleRow): SupervisorVehicleDetail => {
+    const type = apiType(row.tipo_vehiculo);
     const mileage = row.kilometraje_actual === null ? null : Number(row.kilometraje_actual);
     const nextOil = row.proximo_cambio_aceite_km === null ? null : Number(row.proximo_cambio_aceite_km);
     const remaining = nextOil === null || mileage === null ? null : nextOil - mileage;
@@ -69,13 +79,14 @@ const mapRow = (row: VehicleRow): SupervisorVehicleDetail => {
     };
     const insuranceStatus = expiryStatus(row.seguro_expira, row.seguro_documentado);
     const technicalStatus = expiryStatus(row.tecnico_expira, row.tecnico_documentado);
-    const documentationStatus = insuranceStatus === "expired" || technicalStatus === "expired" ? "expired"
-        : insuranceStatus === "incomplete" || technicalStatus === "incomplete" ? "incomplete"
-        : insuranceStatus === "upcoming" || technicalStatus === "upcoming" ? "upcoming" : "valid";
+    const technical = technicalRequirement(row.fecha_matricula, type);
+    const documentationStatus = insuranceStatus === "expired" || (technical.required && technicalStatus === "expired") ? "expired"
+        : insuranceStatus === "incomplete" || (technical.required && technicalStatus === "incomplete") ? "incomplete"
+        : insuranceStatus === "upcoming" || (technical.required && technicalStatus === "upcoming") ? "upcoming" : "valid";
 
     return {
         id: row.id,
-        type: apiType(row.tipo_vehiculo),
+        type,
         plate: row.placa,
         transitLicense: row.licencia_transito,
         brand: row.marca,
@@ -95,8 +106,11 @@ const mapRow = (row: VehicleRow): SupervisorVehicleDetail => {
         lastFumigationDate: row.ultima_fumigacion,
         nextFumigationDate: nextFumigation,
         fumigationStatus,
+        registrationDate: row.fecha_matricula ?? "",
+        technicalInspectionRequired: technical.required,
+        technicalInspectionDueDate: technical.dueDate,
         documentationStatus,
-        availableForJourney: row.estado && insuranceStatus !== "expired" && insuranceStatus !== "incomplete" && technicalStatus !== "expired" && technicalStatus !== "incomplete",
+        availableForJourney: row.estado && insuranceStatus !== "expired" && insuranceStatus !== "incomplete" && (!technical.required || (technicalStatus !== "expired" && technicalStatus !== "incomplete")),
         insurances: [],
         technicalInspections: [],
     };
@@ -104,7 +118,7 @@ const mapRow = (row: VehicleRow): SupervisorVehicleDetail => {
 
 const select = `
     SELECT v.id, v.tipo_vehiculo::text, v.placa, v.licencia_transito,
-           v.marca, v.propietario, v.kilometraje_actual, v.estado,
+           v.marca, v.propietario, v.kilometraje_actual, v.estado, v.fecha_matricula::text,
            v.created_at::text,
            ca.activo AS control_aceite_activo, ca.intervalo_km AS intervalo_aceite_km,
            ca.margen_alerta_km AS margen_alerta_aceite_km,
@@ -122,7 +136,19 @@ const select = `
     LEFT JOIN LATERAL (
         SELECT s.fecha_expiracion_poliza,
                EXISTS (SELECT 1 FROM documentos_seguros ds WHERE ds.seguro_id = s.id) AS documentado
-        FROM seguros_vehiculos s WHERE s.carro_id = v.id
+        FROM seguros_vehiculos s
+        WHERE s.carro_id = v.id
+          AND (
+              UPPER(BTRIM(COALESCE(s.tipo_poliza, ''))) = 'SOAT'
+              OR (
+                  BTRIM(COALESCE(s.tipo_poliza, '')) = ''
+                  AND NOT EXISTS (
+                      SELECT 1 FROM seguros_vehiculos soat
+                      WHERE soat.carro_id = v.id
+                        AND UPPER(BTRIM(COALESCE(soat.tipo_poliza, ''))) = 'SOAT'
+                  )
+              )
+          )
         ORDER BY s.fecha_expiracion_poliza DESC NULLS LAST, s.id DESC LIMIT 1
     ) si ON TRUE
     LEFT JOIN LATERAL (
@@ -237,9 +263,9 @@ export class SupervisorVehiclesRepository {
         try {
             await client.query("BEGIN");
             const inserted = await client.query<{ id: number }>(
-                `INSERT INTO vehiculo (tipo_vehiculo, placa, licencia_transito, marca, propietario, kilometraje_actual, estado, created_at)
-                 VALUES ($1, $2, $3, $4, $5, $6, TRUE, CURRENT_TIMESTAMP) RETURNING id`,
-                [input.databaseType, input.plate, input.transitLicense, input.brand, input.owner, input.currentMileage]
+                `INSERT INTO vehiculo (tipo_vehiculo, placa, licencia_transito, marca, propietario, kilometraje_actual, fecha_matricula, estado, created_at)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE, CURRENT_TIMESTAMP) RETURNING id`,
+                [input.databaseType, input.plate, input.transitLicense, input.brand, input.owner, input.currentMileage, input.registrationDate]
             );
             const id = inserted.rows[0]!.id;
             if (input.currentMileage !== null) await client.query(
@@ -263,8 +289,8 @@ export class SupervisorVehiclesRepository {
             const previousMileage = current.rows[0].kilometraje_actual === null ? null : Number(current.rows[0].kilometraje_actual);
             await client.query(
                 `UPDATE vehiculo SET tipo_vehiculo = $2, placa = $3, licencia_transito = $4,
-                    marca = $5, propietario = $6, kilometraje_actual = $7 WHERE id = $1`,
-                [vehicleId, input.databaseType, input.plate, input.transitLicense, input.brand, input.owner, input.currentMileage]
+                    marca = $5, propietario = $6, kilometraje_actual = $7, fecha_matricula = $8 WHERE id = $1`,
+                [vehicleId, input.databaseType, input.plate, input.transitLicense, input.brand, input.owner, input.currentMileage, input.registrationDate]
             );
             if (input.currentMileage !== null && (previousMileage === null || input.currentMileage > previousMileage)) {
                 await client.query(

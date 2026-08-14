@@ -18,6 +18,7 @@ const empty: SupervisorVehicleInput = {
     currentMileage: null, oilControlEnabled: true, oilIntervalKm: 5000,
     oilWarningMarginKm: 500, oilReferenceMileage: null, fumigationRequired: false,
     fumigationFrequencyDays: null, lastFumigationDate: null,
+    registrationDate: "",
 };
 
 const supervisorName = () => {
@@ -40,6 +41,14 @@ const emptyDocument = (): LegalDocumentDraft => ({
     number: "", type: "", provider: "", validFrom: "", expiresAt: "", price: "", file: null,
 });
 
+const calculateTechnicalRequirement = (registrationDate: string, type: VehicleType) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(registrationDate)) return { required: true, dueDate: null as string | null };
+    const due = new Date(`${registrationDate}T00:00:00Z`);
+    due.setUTCFullYear(due.getUTCFullYear() + (type === "motocicleta" || type === "motocarguero" ? 2 : 5));
+    const dueDate = due.toISOString().slice(0, 10);
+    return { required: new Date().toISOString().slice(0, 10) >= dueDate, dueDate };
+};
+
 export default function SupervisorVehicleFormPage() {
     const navigate = useNavigate();
     const { vehicleId } = useParams();
@@ -51,8 +60,11 @@ export default function SupervisorVehicleFormPage() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
-    const [insurance, setInsurance] = useState<LegalDocumentDraft>(emptyDocument);
+    const [insurances, setInsurances] = useState<LegalDocumentDraft[]>([
+        { ...emptyDocument(), type: "SOAT" },
+    ]);
     const [technicalInspection, setTechnicalInspection] = useState<LegalDocumentDraft>(emptyDocument);
+    const technicalRequirement = calculateTechnicalRequirement(form.registrationDate, form.type);
 
     useEffect(() => {
         if (!editing) return;
@@ -78,8 +90,14 @@ export default function SupervisorVehicleFormPage() {
         event.preventDefault(); setSaving(true); setError(null); setSuccess(null);
         try {
             if (!editing) {
-                if (!insurance.number || !insurance.expiresAt || !insurance.file) throw new Error("Completa y adjunta el seguro del vehículo");
-                if (!technicalInspection.number || !technicalInspection.expiresAt || !technicalInspection.file) throw new Error("Completa y adjunta la revisión técnico-mecánica");
+                const soat = insurances[0];
+                if (!soat?.number || !soat.expiresAt || !soat.file) throw new Error("Completa y adjunta el SOAT del vehículo");
+                const incompleteAdditional = insurances.slice(1).some((draft) => !draft.number || !draft.type.trim() || !draft.expiresAt || !draft.file);
+                if (incompleteAdditional) throw new Error("Completa o elimina los seguros adicionales incompletos");
+                const hasTechnicalData = Object.entries(technicalInspection).some(([key, value]) => key === "file" ? value !== null : value !== "");
+                if (hasTechnicalData && (!technicalInspection.number || !technicalInspection.expiresAt || !technicalInspection.file)) {
+                    throw new Error("Completa todos los datos de la revisión técnico-mecánica o déjala vacía");
+                }
             }
             let result = editing ? await supervisorVehiclesService.update(id, form) : await supervisorVehiclesService.create(form);
             setVehicle(result); setForm(result);
@@ -88,11 +106,15 @@ export default function SupervisorVehicleFormPage() {
             } else {
                 navigate(`/supervisor/vehicles/${result.id}`, { replace: true });
                 try {
-                    result = await uploadDocument(result.id, insurance, "insurance");
-                    setVehicle(result); setForm(result);
-                    result = await uploadDocument(result.id, technicalInspection, "technical");
-                    setVehicle(result); setForm(result);
-                    setInsurance(emptyDocument()); setTechnicalInspection(emptyDocument());
+                    for (const insurance of insurances) {
+                        result = await uploadDocument(result.id, insurance, "insurance");
+                        setVehicle(result); setForm(result);
+                    }
+                    if (technicalInspection.file) {
+                        result = await uploadDocument(result.id, technicalInspection, "technical");
+                        setVehicle(result); setForm(result);
+                    }
+                    setInsurances([{ ...emptyDocument(), type: "SOAT" }]); setTechnicalInspection(emptyDocument());
                     setSuccess("Vehículo y documentación registrados correctamente");
                 } catch (documentError) {
                     setError(`El vehículo fue creado, pero no se completó toda la documentación: ${documentError instanceof Error ? documentError.message : "error al guardar documentos"}`);
@@ -127,6 +149,7 @@ export default function SupervisorVehicleFormPage() {
                 <Card title="Información del vehículo"><div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     <Field label="Tipo de vehículo *"><select value={form.type} onChange={(e) => set("type", e.target.value as VehicleType)} className="control"><option value="camioneta">Camioneta</option><option value="motocicleta">Motocicleta</option><option value="motocarguero">Motocarguero</option><option value="carro">Carro</option></select></Field>
                     <Field label="Placa *"><input required value={form.plate} onChange={(e) => set("plate", e.target.value)} className="control uppercase" /></Field>
+                    <Field label="Fecha de matrícula *"><input required max={new Date().toISOString().slice(0, 10)} type="date" value={form.registrationDate} onChange={(e) => set("registrationDate", e.target.value)} className="control" /></Field>
                     <Field label="Kilometraje actual (opcional)"><input min={0} type="number" value={form.currentMileage ?? ""} onChange={(e) => set("currentMileage", nullableNumber(e.target.value))} placeholder="Se establecerá en la primera lectura" className="control" /></Field>
                     <Field label="Marca"><input value={form.brand ?? ""} onChange={(e) => set("brand", e.target.value || null)} className="control" /></Field>
                     <Field label="Licencia de tránsito"><input value={form.transitLicense ?? ""} onChange={(e) => set("transitLicense", e.target.value || null)} className="control" /></Field>
@@ -143,11 +166,21 @@ export default function SupervisorVehicleFormPage() {
                     {vehicle?.fumigationRequired && <Alert status={vehicle.fumigationStatus} text={vehicle.nextFumigationDate ? `Próxima fumigación: ${vehicle.nextFumigationDate}` : "Falta registrar una fumigación de referencia."} />}
                 </Card>
 
+                <Card title="Exigencia de revisión técnico-mecánica" description="Se calcula automáticamente según el tipo de vehículo y su fecha de matrícula.">
+                    <p className={`rounded-xl p-3 text-sm ${technicalRequirement.required ? "bg-amber-50 text-amber-700" : "bg-blue-50 text-blue-700"}`}>
+                        {!form.registrationDate
+                            ? "Ingresa la fecha de matrícula para determinar cuándo corresponde la primera revisión."
+                            : technicalRequirement.required
+                                ? "Este vehículo ya requiere una revisión técnico-mecánica vigente para iniciar jornadas."
+                                : `La primera revisión será exigible a partir del ${technicalRequirement.dueDate}.`}
+                    </p>
+                </Card>
+
                 <LegalDocuments
                     vehicle={vehicle}
-                    insurance={insurance}
+                    insurances={insurances}
                     technicalInspection={technicalInspection}
-                    onInsuranceChange={setInsurance}
+                    onInsurancesChange={setInsurances}
                     onTechnicalChange={setTechnicalInspection}
                     onChange={(updated, message) => { setVehicle(updated); setForm(updated); setSuccess(message); setError(null); }}
                     onError={setError}
@@ -159,11 +192,11 @@ export default function SupervisorVehicleFormPage() {
     </div>;
 }
 
-function LegalDocuments({ vehicle, insurance, technicalInspection, onInsuranceChange, onTechnicalChange, onChange, onError }: {
+function LegalDocuments({ vehicle, insurances, technicalInspection, onInsurancesChange, onTechnicalChange, onChange, onError }: {
     vehicle: SupervisorVehicle | null;
-    insurance: LegalDocumentDraft;
+    insurances: LegalDocumentDraft[];
     technicalInspection: LegalDocumentDraft;
-    onInsuranceChange: (draft: LegalDocumentDraft) => void;
+    onInsurancesChange: (drafts: LegalDocumentDraft[]) => void;
     onTechnicalChange: (draft: LegalDocumentDraft) => void;
     onChange: (vehicle: SupervisorVehicle, message: string) => void;
     onError: (message: string | null) => void;
@@ -179,9 +212,17 @@ function LegalDocuments({ vehicle, insurance, technicalInspection, onInsuranceCh
     return <Card title="Documentación legal" description="Los documentos se guardan de forma privada y se abren mediante enlaces temporales.">
         {vehicle
             ? <div className="mb-5"><DocumentStatusBadge status={vehicle.documentationStatus} /><span className="ml-3 text-sm text-gray-600">{vehicle.availableForJourney ? "Disponible para iniciar jornada" : "No disponible para conductores hasta completar documentos vigentes"}</span></div>
-            : <p className="mb-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-800">Adjunta ambos documentos. Al registrar, el sistema creará el vehículo y guardará su documentación automáticamente.</p>}
+            : <p className="mb-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-800">El SOAT es obligatorio. Puedes agregar otros seguros y la revisión técnico-mecánica durante el registro o posteriormente.</p>}
         <div className="grid gap-6 xl:grid-cols-2">
-            <LegalDocumentForm title="Seguro del vehículo" draft={insurance} onDraftChange={onInsuranceChange} includeProvider onSave={vehicle ? async () => { const updated = await saveExisting(insurance, "insurance"); onInsuranceChange(emptyDocument()); onChange(updated, "Seguro registrado correctamente"); } : undefined} onError={onError} />
+            {vehicle
+                ? <LegalDocumentForm title="Agregar seguro" draft={insurances[0] ?? emptyDocument()} onDraftChange={(draft) => onInsurancesChange([draft])} includeProvider onSave={async () => { const draft = insurances[0] ?? emptyDocument(); const updated = await saveExisting(draft, "insurance"); onInsurancesChange([emptyDocument()]); onChange(updated, "Seguro registrado correctamente"); }} onError={onError} />
+                : <div className="space-y-4">
+                    {insurances.map((draft, index) => <div key={index} className="relative">
+                        <LegalDocumentForm title={index === 0 ? "SOAT obligatorio" : `Seguro adicional ${index}`} draft={draft} onDraftChange={(next) => onInsurancesChange(insurances.map((item, itemIndex) => itemIndex === index ? next : item))} includeProvider required typeLocked={index === 0} onError={onError} />
+                        {index > 0 && <button type="button" onClick={() => onInsurancesChange(insurances.filter((_, itemIndex) => itemIndex !== index))} className="mt-2 w-full rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600">Eliminar seguro</button>}
+                    </div>)}
+                    <button type="button" onClick={() => onInsurancesChange([...insurances, emptyDocument()])} className="w-full rounded-xl border border-amber-300 px-4 py-3 text-sm font-semibold text-amber-700">Agregar otro seguro</button>
+                </div>}
             <LegalDocumentForm title="Revisión técnico-mecánica" draft={technicalInspection} onDraftChange={onTechnicalChange} onSave={vehicle ? async () => { const updated = await saveExisting(technicalInspection, "technical"); onTechnicalChange(emptyDocument()); onChange(updated, "Revisión técnico-mecánica registrada correctamente"); } : undefined} onError={onError} />
         </div>
         {vehicle && <div className="mt-6 grid gap-6 xl:grid-cols-2"><History title="Historial de seguros" rows={vehicle.insurances.map((item) => ({ id: item.id, name: item.policyNumber, expiresAt: item.expiresAt, status: item.status, url: item.document?.downloadUrl }))} /><History title="Historial técnico-mecánico" rows={vehicle.technicalInspections.map((item) => ({ id: item.id, name: item.number, expiresAt: item.expiresAt, status: item.status, url: item.document?.downloadUrl }))} /></div>}
@@ -192,7 +233,7 @@ function draftToInput(draft: LegalDocumentDraft, objectKey: string): VehicleLega
     return { number: draft.number, type: draft.type || null, provider: draft.provider || null, validFrom: draft.validFrom || null, expiresAt: draft.expiresAt, price: draft.price ? Number(draft.price) : null, objectKey, fileName: draft.file?.name ?? "documento.pdf" };
 }
 
-function LegalDocumentForm({ title, draft, onDraftChange, includeProvider = false, onSave, onError }: { title: string; draft: LegalDocumentDraft; onDraftChange: (draft: LegalDocumentDraft) => void; includeProvider?: boolean; onSave?: () => Promise<void>; onError: (message: string | null) => void }) {
+function LegalDocumentForm({ title, draft, onDraftChange, includeProvider = false, required = false, typeLocked = false, onSave, onError }: { title: string; draft: LegalDocumentDraft; onDraftChange: (draft: LegalDocumentDraft) => void; includeProvider?: boolean; required?: boolean; typeLocked?: boolean; onSave?: () => Promise<void>; onError: (message: string | null) => void }) {
     const [saving, setSaving] = useState(false);
     const setDraft = <K extends keyof LegalDocumentDraft>(key: K, value: LegalDocumentDraft[K]) => onDraftChange({ ...draft, [key]: value });
     const submit = async () => {
@@ -203,7 +244,7 @@ function LegalDocumentForm({ title, draft, onDraftChange, includeProvider = fals
         catch (reason) { onError(reason instanceof Error ? reason.message : "No fue posible guardar el documento"); }
         finally { setSaving(false); }
     };
-    return <section className="rounded-2xl border p-5"><h3 className="font-bold">{title}</h3><div className="mt-4 grid gap-3 sm:grid-cols-2"><Field label="Número *"><input required={!onSave} value={draft.number} onChange={(e) => setDraft("number", e.target.value)} className="control" /></Field>{includeProvider && <><Field label="Tipo de póliza"><input value={draft.type} onChange={(e) => setDraft("type", e.target.value)} className="control" /></Field><Field label="Aseguradora"><input value={draft.provider} onChange={(e) => setDraft("provider", e.target.value)} className="control" /></Field></>}<Field label="Inicio de vigencia"><input type="date" value={draft.validFrom} onChange={(e) => setDraft("validFrom", e.target.value)} className="control" /></Field><Field label="Vencimiento *"><input required={!onSave} type="date" value={draft.expiresAt} onChange={(e) => setDraft("expiresAt", e.target.value)} className="control" /></Field><Field label="Valor"><input min={0} type="number" value={draft.price} onChange={(e) => setDraft("price", e.target.value)} className="control" /></Field><Field label="Documento PDF *"><input key={draft.file?.name ?? "empty"} required={!onSave} type="file" accept="application/pdf" onChange={(e) => setDraft("file", e.target.files?.[0] ?? null)} className="control" /></Field></div>{onSave && <button type="button" disabled={saving || !draft.number || !draft.expiresAt || !draft.file} onClick={submit} className="mt-4 w-full rounded-xl bg-amber-400 px-4 py-3 font-semibold disabled:opacity-50">{saving ? "Guardando documento..." : "Guardar documento"}</button>}</section>;
+    return <section className="rounded-2xl border p-5"><h3 className="font-bold">{title}</h3>{!required && !onSave && <p className="mt-1 text-xs text-gray-500">Opcional; puedes completarla después.</p>}<div className="mt-4 grid gap-3 sm:grid-cols-2"><Field label={`Número${required || onSave ? " *" : ""}`}><input value={draft.number} onChange={(e) => setDraft("number", e.target.value)} className="control" /></Field>{includeProvider && <><Field label={`Tipo de póliza${required ? " *" : ""}`}><input disabled={typeLocked} value={draft.type} onChange={(e) => setDraft("type", e.target.value)} className="control disabled:bg-gray-100" /></Field><Field label="Aseguradora"><input value={draft.provider} onChange={(e) => setDraft("provider", e.target.value)} className="control" /></Field></>}<Field label="Inicio de vigencia"><input type="date" value={draft.validFrom} onChange={(e) => setDraft("validFrom", e.target.value)} className="control" /></Field><Field label={`Vencimiento${required || onSave ? " *" : ""}`}><input type="date" value={draft.expiresAt} onChange={(e) => setDraft("expiresAt", e.target.value)} className="control" /></Field><Field label="Valor"><input min={0} type="number" value={draft.price} onChange={(e) => setDraft("price", e.target.value)} className="control" /></Field><Field label={`Documento PDF${required || onSave ? " *" : ""}`}><input key={draft.file?.name ?? "empty"} type="file" accept="application/pdf" onChange={(e) => setDraft("file", e.target.files?.[0] ?? null)} className="control" /></Field></div>{onSave && <button type="button" disabled={saving || !draft.number || !draft.expiresAt || !draft.file} onClick={submit} className="mt-4 w-full rounded-xl bg-amber-400 px-4 py-3 font-semibold disabled:opacity-50">{saving ? "Guardando documento..." : "Guardar documento"}</button>}</section>;
 }
 
 function History({ title, rows }: { title: string; rows: Array<{ id: number; name: string; expiresAt: string | null; status: DocumentStatus; url?: string }> }) { return <section><h3 className="mb-3 font-bold">{title}</h3><div className="space-y-2">{rows.length === 0 ? <p className="rounded-xl bg-gray-50 p-4 text-sm text-gray-500">Sin registros.</p> : rows.map((row) => <div key={row.id} className="flex items-center justify-between gap-3 rounded-xl border p-3"><div><p className="font-medium">{row.name}</p><p className="text-xs text-gray-500">Vence: {row.expiresAt ?? "Sin fecha"}</p></div><div className="flex items-center gap-2"><DocumentStatusBadge status={row.status} />{row.url && <a href={row.url} target="_blank" rel="noreferrer" className="rounded-lg border px-3 py-2 text-sm font-semibold">Abrir PDF</a>}</div></div>)}</div></section>; }

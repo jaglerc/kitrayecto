@@ -104,6 +104,28 @@ export default function SupervisorCreateUserPage() {
         setError(null);
     };
 
+    const updateRole = (role: SupervisorUserRole) => {
+        setForm((current) => ({
+            ...current,
+            role,
+            ...(role === "Conductor" ? {} : {
+                categoriaLicencia: "",
+                vencimientoLicencia: "",
+                requiereManipulacionAlimentos: false,
+            }),
+        }));
+        if (role !== "Conductor") {
+            setDocuments((current) => ({
+                ...current,
+                Licencia_conduccion: createDocument("Licencia_conduccion"),
+                Certificado_manipulacion_alimentos: createDocument("Certificado_manipulacion_alimentos"),
+            }));
+            uploadedTypes.current.delete("Licencia_conduccion");
+            uploadedTypes.current.delete("Certificado_manipulacion_alimentos");
+        }
+        setError(null);
+    };
+
     const updateDocument = (
         type: SupervisorDocumentType,
         value: SupervisorDocumentValue
@@ -119,7 +141,7 @@ export default function SupervisorCreateUserPage() {
         form.nombre.trim() &&
         form.cedula.trim() &&
         form.password.length >= 8 &&
-        (!form.requiereManipulacionAlimentos ||
+        (form.role !== "Conductor" || !form.requiereManipulacionAlimentos ||
             documents.Certificado_manipulacion_alimentos.file)
     );
 
@@ -282,28 +304,30 @@ export default function SupervisorCreateUserPage() {
                         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                             <label className="text-sm font-medium text-gray-700">
                                 Rol <span className="text-red-500">*</span>
-                                <select value={form.role} onChange={(event) => update("role", event.target.value as SupervisorUserRole)} className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-3 outline-none focus:border-amber-400">
+                                <select value={form.role} onChange={(event) => updateRole(event.target.value as SupervisorUserRole)} className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-3 outline-none focus:border-amber-400">
                                     <option value="Conductor">Conductor</option>
                                     <option value="Supervisor">Supervisor</option>
-                                    {currentUser?.role === "Administrador" && <option value="Administrador">Administrador</option>}
+                                    <option value="Administrador">Administrador</option>
                                 </select>
                             </label>
-                            <Field label="Categoría de licencia" value={form.categoriaLicencia} placeholder="Ej. C2" onChange={(value) => update("categoriaLicencia", value)} />
-                            <Field label="Vencimiento de licencia" type="date" value={form.vencimientoLicencia} onChange={(value) => update("vencimientoLicencia", value)} />
+                            {form.role === "Conductor" && <>
+                                <Field label="Categoría de licencia" value={form.categoriaLicencia} placeholder="Ej. C2" onChange={(value) => update("categoriaLicencia", value)} />
+                                <Field label="Vencimiento de licencia" type="date" value={form.vencimientoLicencia} onChange={(value) => update("vencimientoLicencia", value)} />
+                            </>}
                             <Field label="Contraseña inicial" required type="password" value={form.password} placeholder="Mínimo 8 caracteres" onChange={(value) => update("password", value)} />
-                            <label className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 md:col-span-2">
+                            {form.role === "Conductor" && <label className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 md:col-span-2">
                                 <input type="checkbox" checked={form.requiereManipulacionAlimentos} onChange={(event) => update("requiereManipulacionAlimentos", event.target.checked)} className="h-4 w-4 accent-amber-400" />
                                 El conductor requiere manipulación de alimentos
-                            </label>
+                            </label>}
                         </div>
                     </FormSection>
 
                     <FormSection title="Documentos">
                         <div className="grid gap-4 xl:grid-cols-2">
                             <SupervisorDocumentField label="Foto" value={documents.Foto} status={uploadStatuses.Foto} onChange={(value) => updateDocument("Foto", value)} />
-                            <SupervisorDocumentField label="Licencia de conducción" value={documents.Licencia_conduccion} status={uploadStatuses.Licencia_conduccion} onChange={(value) => updateDocument("Licencia_conduccion", value)} />
                             <SupervisorDocumentField label="Cédula" value={documents.Cedula} status={uploadStatuses.Cedula} onChange={(value) => updateDocument("Cedula", value)} />
-                            {form.requiereManipulacionAlimentos && (
+                            {form.role === "Conductor" && <SupervisorDocumentField label="Licencia de conducción" value={documents.Licencia_conduccion} status={uploadStatuses.Licencia_conduccion} onChange={(value) => updateDocument("Licencia_conduccion", value)} />}
+                            {form.role === "Conductor" && form.requiereManipulacionAlimentos && (
                                 <SupervisorDocumentField label="Certificado de manipulación de alimentos" value={documents.Certificado_manipulacion_alimentos} status={uploadStatuses.Certificado_manipulacion_alimentos} onChange={(value) => updateDocument("Certificado_manipulacion_alimentos", value)} required />
                             )}
                         </div>
