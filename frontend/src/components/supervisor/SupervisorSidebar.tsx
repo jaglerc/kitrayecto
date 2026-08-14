@@ -1,21 +1,18 @@
 import { useNavigate } from "react-router";
 
 import bellIcon from "../../icons/supervisor/bell.svg";
-import documentIcon from "../../icons/supervisor/document.svg";
 import homeIcon from "../../icons/supervisor/home.svg";
 import logoutIcon from "../../icons/supervisor/logout.svg";
-import shieldIcon from "../../icons/supervisor/shield.svg";
 import usersIcon from "../../icons/supervisor/users.svg";
 import vehicleIcon from "../../icons/supervisor/vehicle.svg";
+import costIcon from "../../icons/cost.png";
 
 type SupervisorOption =
     | "inicio"
     | "usuarios"
     | "vehiculos"
     | "novedades"
-    | "documentos"
-    | "roles"
-    | "notificaciones";
+    | "costos";
 
 interface SupervisorSidebarProps {
     name: string;
@@ -32,9 +29,7 @@ const navigationItems: Array<{
     { id: "usuarios", icon: usersIcon, label: "Usuarios", path: "/supervisor/users" },
     { id: "vehiculos", icon: vehicleIcon, label: "Vehículos", path: "/supervisor/vehicles" },
     { id: "novedades", icon: bellIcon, label: "Novedades", path: "/supervisor/incidents" },
-    { id: "documentos", icon: documentIcon, label: "Documentos" },
-    { id: "roles", icon: shieldIcon, label: "Roles y permisos" },
-    { id: "notificaciones", icon: bellIcon, label: "Notificaciones" },
+    { id: "costos", icon: costIcon, label: "Costos" },
 ];
 
 export default function SupervisorSidebar({
@@ -75,14 +70,14 @@ export default function SupervisorSidebar({
                             type="button"
                             disabled={!isAvailable}
                             onClick={() => item.path && navigate(item.path)}
-                            title={!isAvailable ? "Se desarrollará en el siguiente módulo" : undefined}
+                            title={!isAvailable ? "Próximamente" : undefined}
                             className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm transition ${
                                 isActive
                                     ? "border border-amber-400 bg-amber-50 font-semibold text-gray-900"
-                                    : "text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                    : "text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400 disabled:opacity-100"
                             }`}
                         >
-                            <img src={item.icon} alt="" aria-hidden="true" className="h-5 w-5" />
+                            <img src={item.icon} alt="" aria-hidden="true" className={`h-5 w-5 object-contain ${!isAvailable ? "grayscale opacity-50" : ""}`} />
                             {item.label}
                         </button>
                     );
