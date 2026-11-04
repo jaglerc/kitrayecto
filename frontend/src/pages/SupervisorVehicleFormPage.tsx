@@ -230,7 +230,42 @@ function LegalDocuments({ vehicle, insurances, technicalInspection, onInsurances
                 </div>}
             <LegalDocumentForm title="Revisión técnico-mecánica" draft={technicalInspection} onDraftChange={onTechnicalChange} onSave={vehicle ? async () => { const updated = await saveExisting(technicalInspection, "technical"); onTechnicalChange(emptyDocument()); onChange(updated, "Revisión técnico-mecánica registrada correctamente"); } : undefined} onError={onError} />
         </div>
-        {vehicle && <div className="mt-6 grid gap-6 xl:grid-cols-2"><History title="Historial de seguros" vehicle={vehicle} kind="insurance" busy={busy} onChange={onChange} onError={onError} rows={vehicle.insurances.map((item) => ({ id: item.id, name: `${item.policyType || "Seguro"} · ${item.policyNumber}`, expiresAt: item.expiresAt, status: item.status, url: item.document?.downloadUrl, hasDocument: Boolean(item.document) }))} /><History title="Historial técnico-mecánico" vehicle={vehicle} kind="technical-inspections" busy={busy} onChange={onChange} onError={onError} rows={vehicle.technicalInspections.map((item) => ({ id: item.id, name: item.number, expiresAt: item.expiresAt, status: item.status, url: item.document?.downloadUrl, hasDocument: Boolean(item.document) }))} /></div>}
+        {vehicle && (
+            <div className="mt-6 grid gap-6 xl:grid-cols-2">
+                <History
+                    title="Historial de seguros"
+                    vehicle={vehicle}
+                    kind="insurance"
+                    busy={busy}
+                    onChange={onChange}
+                    onError={onError}
+                    rows={vehicle.insurances.map((item) => ({
+                        id: item.id,
+                        name: `${item.policyType || "Seguro"} · ${item.policyNumber}`,
+                        expiresAt: item.expiresAt,
+                        status: item.status,
+                        url: item.document?.downloadUrl,
+                        hasDocument: Boolean(item.document),
+                    }))}
+                />
+                <History
+                    title="Historial técnico-mecánico"
+                    vehicle={vehicle}
+                    kind="technical-inspections"
+                    busy={busy}
+                    onChange={onChange}
+                    onError={onError}
+                    rows={vehicle.technicalInspections.map((item) => ({
+                        id: item.id,
+                        name: item.number,
+                        expiresAt: item.expiresAt,
+                        status: item.status,
+                        url: item.document?.downloadUrl,
+                        hasDocument: Boolean(item.document),
+                    }))}
+                />
+            </div>
+        )}
     </Card>;
 }
 
@@ -261,11 +296,72 @@ function History({ title, rows, vehicle, kind, busy, onChange, onError }: {
     onChange: (vehicle: SupervisorVehicle, message: string) => void;
     onError: (message: string | null) => void;
 }) {
-    const refresh = () => {
-        void supervisorVehiclesService.findById(vehicle.id).then((updated) => onChange(updated, "Eliminación completada. El estado documental fue actualizado y la limpieza de archivos se procesará automáticamente.")).catch(() => onError("La eliminación se completó, pero no fue posible actualizar la pantalla. Recarga la página para consultar el estado actual."));
-    };
-    return <section><h3 className="mb-3 font-bold">{title}</h3><div className="space-y-3">{rows.length === 0 ? <p className="rounded-xl bg-gray-50 p-4 text-sm text-gray-500">Sin registros.</p> : rows.map((row) => <article key={row.id} className="rounded-xl border p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0"><p className="break-words font-medium">{row.name}</p><p className="mt-1 text-xs text-gray-500">Vence: {row.expiresAt ?? "Sin fecha"}</p></div><DocumentStatusBadge status={row.status} /></div><div className="mt-4 flex flex-wrap gap-2">{row.url && <a href={row.url} target="_blank" rel="noreferrer" className="rounded-lg border px-3 py-2 text-sm font-semibold">Abrir PDF</a>}{row.hasDocument && <DeleteAction label="Eliminar solo PDF" title="Eliminar archivo PDF" description={`Se quitará el PDF de ${row.name} del vehículo ${vehicle.plate}. Los datos del registro se conservarán y quedará sin soporte documental. Si es un documento requerido, el vehículo podría no estar disponible para iniciar jornadas.`} disabled={busy} onDelete={() => deletionService.legalRecord(vehicle.id, kind, row.id, true)} onDeleted={refresh} />}<DeleteAction label="Eliminar registro" title={kind === "insurance" ? "Eliminar seguro" : "Eliminar revisión técnico-mecánica"} description={`Se eliminará ${row.name} del vehículo ${vehicle.plate}, junto con sus datos y archivos. Se recalcularán las alertas y la disponibilidad del vehículo usando los registros restantes.`} disabled={busy} onDelete={() => deletionService.legalRecord(vehicle.id, kind, row.id)} onDeleted={refresh} /></div></article>)}</div></section>;
+    async function refresh() {
+        try {
+            const updated = await supervisorVehiclesService.findById(vehicle.id);
+            onChange(updated, "Eliminación completada. La limpieza de archivos se procesará automáticamente.");
+        } catch {
+            onError("La eliminación se completó. Recarga la página para consultar el estado actual.");
+        }
+    }
+
+    const deleteTitle = kind === "insurance" ? "Eliminar seguro" : "Eliminar revisión técnico-mecánica";
+
+    return (
+        <section>
+            <h3 className="mb-3 font-bold">{title}</h3>
+            <div className="space-y-3">
+                {rows.length === 0 && (
+                    <p className="rounded-xl bg-gray-50 p-4 text-sm text-gray-500">Sin registros.</p>
+                )}
+                {rows.map((row) => (
+                    <article key={row.id} className="rounded-xl border p-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div className="min-w-0">
+                                <p className="break-words font-medium">{row.name}</p>
+                                <p className="mt-1 text-xs text-gray-500">
+                                    Vence: {row.expiresAt ?? "Sin fecha"}
+                                </p>
+                            </div>
+                            <DocumentStatusBadge status={row.status} />
+                        </div>
+                        <div className="mt-4 flex flex-wrap gap-2">
+                            {row.url && (
+                                <a
+                                    href={row.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="rounded-lg border px-3 py-2 text-sm font-semibold"
+                                >
+                                    Abrir PDF
+                                </a>
+                            )}
+                            {row.hasDocument && (
+                                <DeleteAction
+                                    label="Eliminar solo PDF"
+                                    title="Eliminar archivo PDF"
+                                    description={`Se quitará el PDF de ${row.name} del vehículo ${vehicle.plate}. Si el PDF es obligatorio, el vehículo podría quedar inhabilitado para iniciar jornadas.`}
+                                    disabled={busy}
+                                    onDelete={() => deletionService.legalRecord(vehicle.id, kind, row.id, true)}
+                                    onDeleted={refresh}
+                                />
+                            )}
+                            <DeleteAction
+                                label="Eliminar registro"
+                                title={deleteTitle}
+                                description={`Se eliminará ${row.name} del vehículo ${vehicle.plate}, junto con sus datos y archivos.`}
+                                disabled={busy}
+                                onDelete={() => deletionService.legalRecord(vehicle.id, kind, row.id)}
+                                onDeleted={refresh}
+                            />
+                        </div>
+                    </article>
+                ))}
+            </div>
+        </section>
+    );
 }
+
 function DocumentStatusBadge({ status }: { status: DocumentStatus }) { const styles = status === "expired" ? "bg-red-100 text-red-700" : status === "upcoming" ? "bg-amber-100 text-amber-700" : status === "valid" ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-700"; const text = status === "expired" ? "Vencido" : status === "upcoming" ? "Próximo a vencer" : status === "valid" ? "Vigente" : "Incompleto"; return <span className={`rounded-full px-3 py-1 text-xs font-semibold ${styles}`}>{text}</span>; }
 function Card({ title, description, toggle, children }: { title: string; description?: string; toggle?: React.ReactNode; children: React.ReactNode }) { return <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"><div className="mb-4 flex items-start justify-between gap-4"><div><h2 className="text-base font-bold text-gray-900">{title}</h2>{description && <p className="mt-1 text-sm text-gray-500">{description}</p>}</div>{toggle}</div>{children}</section>; }
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="grid gap-2 text-sm font-medium text-gray-700"><span>{label}</span>{children}</label>; }

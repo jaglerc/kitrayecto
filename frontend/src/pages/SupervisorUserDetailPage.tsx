@@ -127,6 +127,29 @@ export default function SupervisorUserDetailPage() {
         }
     };
 
+    function selectDocument(type: SupervisorDocumentType, value: SupervisorDocumentValue) {
+        setFiles((current) => ({ ...current, [type]: value.file ?? undefined }));
+        setDocumentStatus((current) => ({ ...current, [type]: "idle" }));
+    }
+
+    function handleDocumentDeleted(type: SupervisorDocumentType) {
+        setUser((current) => {
+            if (!current) return current;
+
+            return {
+                ...current,
+                documents: current.documents.filter((document) => document.tipoDocumento !== type),
+            };
+        });
+        setSuccess(`${documentLabels[type]} eliminado. La limpieza del archivo se procesará automáticamente.`);
+        setError(null);
+    }
+
+    const visibleDocumentTypes = documentTypes.filter((type) =>
+        form?.role === "Conductor" ||
+        (type !== "Licencia_conduccion" && type !== "Certificado_manipulacion_alimentos")
+    );
+
     if (loading && !user) return <div className="min-h-dvh bg-gray-50 p-10 text-center text-gray-500">Consultando usuario...</div>;
 
     return (
@@ -156,13 +179,67 @@ export default function SupervisorUserDetailPage() {
                         <div className="mt-5 flex justify-end"><button type="submit" disabled={saving} className="rounded-xl bg-amber-400 px-6 py-3 text-sm font-bold text-gray-900 disabled:opacity-50">{saving ? "Guardando..." : "Guardar cambios"}</button></div>
                     </form>
 
-                    <section className="mt-5 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"><h2 className="font-bold text-gray-900">Documentos vigentes</h2><p className="mt-1 text-sm text-gray-500">Al guardar uno nuevo, reemplazará al archivo anterior. También puedes eliminar un documento sin borrar al usuario.</p><div className="mt-4 grid gap-4 xl:grid-cols-2">
-                        {documentTypes.filter((type) => form.role === "Conductor" || (type !== "Licencia_conduccion" && type !== "Certificado_manipulacion_alimentos")).map((type) => {
-                            const currentDocument = user.documents.find((document) => document.tipoDocumento === type);
-                            const value: SupervisorDocumentValue = { type, file: files[type] ?? null };
-                            return <div key={type} className="space-y-2"><SupervisorDocumentField label={documentLabels[type]} value={value} status={documentStatus[type] ?? "idle"} onChange={(next) => { setFiles((current) => ({ ...current, [type]: next.file ?? undefined })); setDocumentStatus((current) => ({ ...current, [type]: "idle" })); }} /><div className="flex flex-wrap items-center justify-between gap-2 px-1"><p className="min-w-0 truncate text-xs text-gray-500">Actual: {currentDocument?.nombreArchivo ?? "Sin documento"}</p><div className="flex flex-wrap items-center gap-2">{currentDocument?.downloadUrl && <a href={currentDocument.downloadUrl} target="_blank" rel="noreferrer" className="shrink-0 text-xs font-semibold text-amber-600">Abrir</a>}{currentDocument && <DeleteAction label="Eliminar documento" title={`Eliminar ${documentLabels[type].toLowerCase()}`} description={`Se eliminará ${documentLabels[type]} de ${user.nombre} ${user.apellido}, incluidas sus copias anteriores. Los datos del usuario se conservarán.`} disabled={saving || uploading} onDelete={() => deletionService.userDocument(userId, currentDocument.id)} onDeleted={() => { setUser((current) => current ? { ...current, documents: current.documents.filter((document) => document.tipoDocumento !== type) } : current); setSuccess(`${documentLabels[type]} eliminado. La limpieza del archivo se procesará automáticamente.`); setError(null); }} />}</div></div>{files[type] && <button type="button" onClick={() => void replaceDocument(type)} disabled={saving || uploading} className="w-full rounded-lg border border-emerald-300 px-4 py-2 text-sm font-semibold text-emerald-700 disabled:opacity-50">Guardar este documento</button>}</div>;
-                        })}
-                    </div></section>
+                    <section className="mt-5 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                        <h2 className="font-bold text-gray-900">Documentos vigentes</h2>
+                        <p className="mt-1 text-sm text-gray-500">
+                            Al guardar un documento nuevo, se reemplazará el archivo anterior.
+                        </p>
+                        <div className="mt-4 grid gap-4 xl:grid-cols-2">
+                            {visibleDocumentTypes.map((type) => {
+                                const document = user.documents.find((item) => item.tipoDocumento === type);
+                                const label = documentLabels[type];
+                                const value: SupervisorDocumentValue = { type, file: files[type] ?? null };
+
+                                return (
+                                    <div key={type} className="space-y-2">
+                                        <SupervisorDocumentField
+                                            label={label}
+                                            value={value}
+                                            status={documentStatus[type] ?? "idle"}
+                                            onChange={(next) => selectDocument(type, next)}
+                                        />
+                                        <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+                                            <p className="min-w-0 truncate text-xs text-gray-500">
+                                                Actual: {document?.nombreArchivo ?? "Sin documento"}
+                                            </p>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                {document?.downloadUrl && (
+                                                    <a
+                                                        href={document.downloadUrl}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="shrink-0 text-xs font-semibold text-amber-600"
+                                                    >
+                                                        Abrir
+                                                    </a>
+                                                )}
+                                                {document && (
+                                                    <DeleteAction
+                                                        label="Eliminar documento"
+                                                        title={`Eliminar ${label.toLowerCase()}`}
+                                                        description={`Se eliminará ${label} de ${user.nombre} ${user.apellido}, incluidas sus copias anteriores.`}
+                                                        disabled={saving || uploading}
+                                                        onDelete={() => deletionService.userDocument(userId, document.id)}
+                                                        onDeleted={() => handleDocumentDeleted(type)}
+                                                    />
+                                                )}
+                                            </div>
+                                        </div>
+                                        {files[type] && (
+                                            <button
+                                                type="button"
+                                                onClick={() => void replaceDocument(type)}
+                                                disabled={saving || uploading}
+                                                className="w-full rounded-lg border border-emerald-300 px-4 py-2 text-sm font-semibold text-emerald-700 disabled:opacity-50"
+                                            >
+                                                Guardar este documento
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </section>
                 </>}
             </main>
         </div>
