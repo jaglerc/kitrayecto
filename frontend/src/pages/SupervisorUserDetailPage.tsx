@@ -1,5 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router";
+import DeleteAction from "../components/supervisor/DeleteAction";
+import { deletionService } from "../services/deletion.service";
 
 import SupervisorDocumentField from "../components/supervisor/SupervisorDocumentField";
 import type { SupervisorDocumentValue } from "../components/supervisor/SupervisorDocumentField";
@@ -9,7 +11,7 @@ import { storageService } from "../services/storage.service";
 import { supervisorUsersService } from "../services/supervisor-users.service";
 import type { SupervisorDocumentType, SupervisorUserDetail, SupervisorUserRole } from "../services/supervisor-users.service";
 
-interface StoredUser { nombre?: string; role?: SupervisorUserRole; }
+interface StoredUser { id?: number; nombre?: string; role?: SupervisorUserRole; }
 const getStoredUser = (): StoredUser => {
     try { return JSON.parse(localStorage.getItem("user") ?? "null") ?? {}; }
     catch { return {}; }
@@ -37,6 +39,7 @@ export default function SupervisorUserDetailPage() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
+    const uploading = Object.values(documentStatus).includes("uploading");
 
     const load = async () => {
         setLoading(true); setError(null);
@@ -71,7 +74,7 @@ export default function SupervisorUserDetailPage() {
 
     const save = async (event: FormEvent) => {
         event.preventDefault();
-        if (!form || saving) return;
+        if (!form || saving || uploading) return;
         setSaving(true); setError(null); setSuccess(null);
         try {
             await supervisorUsersService.update(userId, {
@@ -94,7 +97,7 @@ export default function SupervisorUserDetailPage() {
     };
 
     const changeStatus = async () => {
-        if (!user || saving) return;
+        if (!user || saving || uploading) return;
         const next = !user.estado;
         if (!window.confirm(next ? "¿Deseas reactivar este usuario?" : "¿Deseas desactivar este usuario? No podrá ingresar al sistema.")) return;
         setSaving(true); setError(null); setSuccess(null);
@@ -108,7 +111,7 @@ export default function SupervisorUserDetailPage() {
 
     const replaceDocument = async (type: SupervisorDocumentType) => {
         const file = files[type];
-        if (!file) return;
+        if (!file || saving || uploading) return;
         setDocumentStatus((current) => ({ ...current, [type]: "uploading" }));
         setError(null); setSuccess(null);
         try {
@@ -153,11 +156,11 @@ export default function SupervisorUserDetailPage() {
                         <div className="mt-5 flex justify-end"><button type="submit" disabled={saving} className="rounded-xl bg-amber-400 px-6 py-3 text-sm font-bold text-gray-900 disabled:opacity-50">{saving ? "Guardando..." : "Guardar cambios"}</button></div>
                     </form>
 
-                    <section className="mt-5 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"><h2 className="font-bold text-gray-900">Documentos vigentes</h2><p className="mt-1 text-sm text-gray-500">Al guardar uno nuevo, reemplazará al archivo anterior.</p><div className="mt-4 grid gap-4 xl:grid-cols-2">
+                    <section className="mt-5 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"><h2 className="font-bold text-gray-900">Documentos vigentes</h2><p className="mt-1 text-sm text-gray-500">Al guardar uno nuevo, reemplazará al archivo anterior. También puedes eliminar un documento sin borrar al usuario.</p><div className="mt-4 grid gap-4 xl:grid-cols-2">
                         {documentTypes.filter((type) => form.role === "Conductor" || (type !== "Licencia_conduccion" && type !== "Certificado_manipulacion_alimentos")).map((type) => {
                             const currentDocument = user.documents.find((document) => document.tipoDocumento === type);
                             const value: SupervisorDocumentValue = { type, file: files[type] ?? null };
-                            return <div key={type} className="space-y-2"><SupervisorDocumentField label={documentLabels[type]} value={value} status={documentStatus[type] ?? "idle"} onChange={(next) => { setFiles((current) => ({ ...current, [type]: next.file ?? undefined })); setDocumentStatus((current) => ({ ...current, [type]: "idle" })); }} /><div className="flex items-center justify-between gap-2 px-1"><p className="truncate text-xs text-gray-500">Actual: {currentDocument?.nombreArchivo ?? "Sin documento"}</p>{currentDocument?.downloadUrl && <a href={currentDocument.downloadUrl} target="_blank" rel="noreferrer" className="shrink-0 text-xs font-semibold text-amber-600">Abrir</a>}</div>{files[type] && <button type="button" onClick={() => void replaceDocument(type)} disabled={documentStatus[type] === "uploading"} className="w-full rounded-lg border border-emerald-300 px-4 py-2 text-sm font-semibold text-emerald-700">Guardar este documento</button>}</div>;
+                            return <div key={type} className="space-y-2"><SupervisorDocumentField label={documentLabels[type]} value={value} status={documentStatus[type] ?? "idle"} onChange={(next) => { setFiles((current) => ({ ...current, [type]: next.file ?? undefined })); setDocumentStatus((current) => ({ ...current, [type]: "idle" })); }} /><div className="flex flex-wrap items-center justify-between gap-2 px-1"><p className="min-w-0 truncate text-xs text-gray-500">Actual: {currentDocument?.nombreArchivo ?? "Sin documento"}</p><div className="flex flex-wrap items-center gap-2">{currentDocument?.downloadUrl && <a href={currentDocument.downloadUrl} target="_blank" rel="noreferrer" className="shrink-0 text-xs font-semibold text-amber-600">Abrir</a>}{currentDocument && <DeleteAction label="Eliminar documento" title={`Eliminar ${documentLabels[type].toLowerCase()}`} description={`Se eliminará ${documentLabels[type]} de ${user.nombre} ${user.apellido}, incluidas sus copias anteriores. Los datos del usuario se conservarán.`} disabled={saving || uploading} onDelete={() => deletionService.userDocument(userId, currentDocument.id)} onDeleted={() => { setUser((current) => current ? { ...current, documents: current.documents.filter((document) => document.tipoDocumento !== type) } : current); setSuccess(`${documentLabels[type]} eliminado. La limpieza del archivo se procesará automáticamente.`); setError(null); }} />}</div></div>{files[type] && <button type="button" onClick={() => void replaceDocument(type)} disabled={saving || uploading} className="w-full rounded-lg border border-emerald-300 px-4 py-2 text-sm font-semibold text-emerald-700 disabled:opacity-50">Guardar este documento</button>}</div>;
                         })}
                     </div></section>
                 </>}

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
+import DeleteAction from "../components/supervisor/DeleteAction";
+import { deletionService } from "../services/deletion.service";
 
 import SupervisorSidebar from "../components/supervisor/SupervisorSidebar";
 import vehicleIcon from "../icons/supervisor/vehicle.svg";
@@ -178,6 +180,7 @@ export default function SupervisorVehicleFormPage() {
                 </Card>
 
                 <LegalDocuments
+                    busy={saving}
                     vehicle={vehicle}
                     insurances={insurances}
                     technicalInspection={technicalInspection}
@@ -193,7 +196,8 @@ export default function SupervisorVehicleFormPage() {
     </div>;
 }
 
-function LegalDocuments({ vehicle, insurances, technicalInspection, onInsurancesChange, onTechnicalChange, onChange, onError }: {
+function LegalDocuments({ vehicle, insurances, technicalInspection, onInsurancesChange, onTechnicalChange, onChange, onError, busy }: {
+    busy: boolean;
     vehicle: SupervisorVehicle | null;
     insurances: LegalDocumentDraft[];
     technicalInspection: LegalDocumentDraft;
@@ -226,7 +230,7 @@ function LegalDocuments({ vehicle, insurances, technicalInspection, onInsurances
                 </div>}
             <LegalDocumentForm title="Revisión técnico-mecánica" draft={technicalInspection} onDraftChange={onTechnicalChange} onSave={vehicle ? async () => { const updated = await saveExisting(technicalInspection, "technical"); onTechnicalChange(emptyDocument()); onChange(updated, "Revisión técnico-mecánica registrada correctamente"); } : undefined} onError={onError} />
         </div>
-        {vehicle && <div className="mt-6 grid gap-6 xl:grid-cols-2"><History title="Historial de seguros" rows={vehicle.insurances.map((item) => ({ id: item.id, name: item.policyNumber, expiresAt: item.expiresAt, status: item.status, url: item.document?.downloadUrl }))} /><History title="Historial técnico-mecánico" rows={vehicle.technicalInspections.map((item) => ({ id: item.id, name: item.number, expiresAt: item.expiresAt, status: item.status, url: item.document?.downloadUrl }))} /></div>}
+        {vehicle && <div className="mt-6 grid gap-6 xl:grid-cols-2"><History title="Historial de seguros" vehicle={vehicle} kind="insurance" busy={busy} onChange={onChange} onError={onError} rows={vehicle.insurances.map((item) => ({ id: item.id, name: `${item.policyType || "Seguro"} · ${item.policyNumber}`, expiresAt: item.expiresAt, status: item.status, url: item.document?.downloadUrl, hasDocument: Boolean(item.document) }))} /><History title="Historial técnico-mecánico" vehicle={vehicle} kind="technical-inspections" busy={busy} onChange={onChange} onError={onError} rows={vehicle.technicalInspections.map((item) => ({ id: item.id, name: item.number, expiresAt: item.expiresAt, status: item.status, url: item.document?.downloadUrl, hasDocument: Boolean(item.document) }))} /></div>}
     </Card>;
 }
 
@@ -248,7 +252,20 @@ function LegalDocumentForm({ title, draft, onDraftChange, includeProvider = fals
     return <section className="rounded-2xl border p-5"><h3 className="font-bold">{title}</h3>{!required && !onSave && <p className="mt-1 text-xs text-gray-500">Opcional; puedes completarla después.</p>}<div className="mt-4 grid gap-3 sm:grid-cols-2"><Field label={`Número${required || onSave ? " *" : ""}`}><input value={draft.number} onChange={(e) => setDraft("number", e.target.value)} className="control" /></Field>{includeProvider && <><Field label={`Tipo de póliza${required ? " *" : ""}`}><input disabled={typeLocked} value={draft.type} onChange={(e) => setDraft("type", e.target.value)} className="control disabled:bg-gray-100" /></Field><Field label="Aseguradora"><input value={draft.provider} onChange={(e) => setDraft("provider", e.target.value)} className="control" /></Field></>}<Field label="Inicio de vigencia"><input type="date" value={draft.validFrom} onChange={(e) => setDraft("validFrom", e.target.value)} className="control" /></Field><Field label={`Vencimiento${required || onSave ? " *" : ""}`}><input type="date" value={draft.expiresAt} onChange={(e) => setDraft("expiresAt", e.target.value)} className="control" /></Field><Field label="Valor"><input min={0} type="number" value={draft.price} onChange={(e) => setDraft("price", e.target.value)} className="control" /></Field><Field label={`Documento PDF${required || onSave ? " *" : ""}`}><input key={draft.file?.name ?? "empty"} type="file" accept="application/pdf" onChange={(e) => setDraft("file", e.target.files?.[0] ?? null)} className="control" /></Field></div>{onSave && <button type="button" disabled={saving || !draft.number || !draft.expiresAt || !draft.file} onClick={submit} className="mt-4 w-full rounded-xl bg-amber-400 px-4 py-3 font-semibold disabled:opacity-50">{saving ? "Guardando documento..." : "Guardar documento"}</button>}</section>;
 }
 
-function History({ title, rows }: { title: string; rows: Array<{ id: number; name: string; expiresAt: string | null; status: DocumentStatus; url?: string }> }) { return <section><h3 className="mb-3 font-bold">{title}</h3><div className="space-y-2">{rows.length === 0 ? <p className="rounded-xl bg-gray-50 p-4 text-sm text-gray-500">Sin registros.</p> : rows.map((row) => <div key={row.id} className="flex items-center justify-between gap-3 rounded-xl border p-3"><div><p className="font-medium">{row.name}</p><p className="text-xs text-gray-500">Vence: {row.expiresAt ?? "Sin fecha"}</p></div><div className="flex items-center gap-2"><DocumentStatusBadge status={row.status} />{row.url && <a href={row.url} target="_blank" rel="noreferrer" className="rounded-lg border px-3 py-2 text-sm font-semibold">Abrir PDF</a>}</div></div>)}</div></section>; }
+function History({ title, rows, vehicle, kind, busy, onChange, onError }: {
+    title: string;
+    rows: Array<{ id: number; name: string; expiresAt: string | null; status: DocumentStatus; url?: string; hasDocument: boolean }>;
+    vehicle: SupervisorVehicle;
+    kind: "insurance" | "technical-inspections";
+    busy: boolean;
+    onChange: (vehicle: SupervisorVehicle, message: string) => void;
+    onError: (message: string | null) => void;
+}) {
+    const refresh = () => {
+        void supervisorVehiclesService.findById(vehicle.id).then((updated) => onChange(updated, "Eliminación completada. El estado documental fue actualizado y la limpieza de archivos se procesará automáticamente.")).catch(() => onError("La eliminación se completó, pero no fue posible actualizar la pantalla. Recarga la página para consultar el estado actual."));
+    };
+    return <section><h3 className="mb-3 font-bold">{title}</h3><div className="space-y-3">{rows.length === 0 ? <p className="rounded-xl bg-gray-50 p-4 text-sm text-gray-500">Sin registros.</p> : rows.map((row) => <article key={row.id} className="rounded-xl border p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0"><p className="break-words font-medium">{row.name}</p><p className="mt-1 text-xs text-gray-500">Vence: {row.expiresAt ?? "Sin fecha"}</p></div><DocumentStatusBadge status={row.status} /></div><div className="mt-4 flex flex-wrap gap-2">{row.url && <a href={row.url} target="_blank" rel="noreferrer" className="rounded-lg border px-3 py-2 text-sm font-semibold">Abrir PDF</a>}{row.hasDocument && <DeleteAction label="Eliminar solo PDF" title="Eliminar archivo PDF" description={`Se quitará el PDF de ${row.name} del vehículo ${vehicle.plate}. Los datos del registro se conservarán y quedará sin soporte documental. Si es un documento requerido, el vehículo podría no estar disponible para iniciar jornadas.`} disabled={busy} onDelete={() => deletionService.legalRecord(vehicle.id, kind, row.id, true)} onDeleted={refresh} />}<DeleteAction label="Eliminar registro" title={kind === "insurance" ? "Eliminar seguro" : "Eliminar revisión técnico-mecánica"} description={`Se eliminará ${row.name} del vehículo ${vehicle.plate}, junto con sus datos y archivos. Se recalcularán las alertas y la disponibilidad del vehículo usando los registros restantes.`} disabled={busy} onDelete={() => deletionService.legalRecord(vehicle.id, kind, row.id)} onDeleted={refresh} /></div></article>)}</div></section>;
+}
 function DocumentStatusBadge({ status }: { status: DocumentStatus }) { const styles = status === "expired" ? "bg-red-100 text-red-700" : status === "upcoming" ? "bg-amber-100 text-amber-700" : status === "valid" ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-700"; const text = status === "expired" ? "Vencido" : status === "upcoming" ? "Próximo a vencer" : status === "valid" ? "Vigente" : "Incompleto"; return <span className={`rounded-full px-3 py-1 text-xs font-semibold ${styles}`}>{text}</span>; }
 function Card({ title, description, toggle, children }: { title: string; description?: string; toggle?: React.ReactNode; children: React.ReactNode }) { return <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"><div className="mb-4 flex items-start justify-between gap-4"><div><h2 className="text-base font-bold text-gray-900">{title}</h2>{description && <p className="mt-1 text-sm text-gray-500">{description}</p>}</div>{toggle}</div>{children}</section>; }
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="grid gap-2 text-sm font-medium text-gray-700"><span>{label}</span>{children}</label>; }

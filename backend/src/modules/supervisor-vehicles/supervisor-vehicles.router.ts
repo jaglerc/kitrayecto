@@ -2,6 +2,7 @@ import { Router } from "express";
 import { AuthMiddleware } from "../../middleware/authmiddleware.js";
 import { RoleMiddleware } from "../../middleware/rolemiddleware.js";
 import { SupervisorVehiclesController } from "./supervisor-vehicles.controller.js";
+import { DeletionsController } from "../deletions/deletions.controller.js";
 
 const router = Router();
 router.use(AuthMiddleware, RoleMiddleware("Supervisor", "Administrador"));
@@ -12,4 +13,8 @@ router.patch("/:vehicleId", SupervisorVehiclesController.update);
 router.patch("/:vehicleId/status", SupervisorVehiclesController.updateStatus);
 router.post("/:vehicleId/insurance", SupervisorVehiclesController.createInsurance);
 router.post("/:vehicleId/technical-inspections", SupervisorVehiclesController.createTechnicalInspection);
+router.delete("/:vehicleId/insurance/:recordId/document", DeletionsController.insuranceDocument);
+router.delete("/:vehicleId/insurance/:recordId", DeletionsController.insurance);
+router.delete("/:vehicleId/technical-inspections/:recordId/document", DeletionsController.technicalDocument);
+router.delete("/:vehicleId/technical-inspections/:recordId", DeletionsController.technical);
 export default router;

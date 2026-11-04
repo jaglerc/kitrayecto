@@ -287,6 +287,7 @@ export class SupervisorUsersRepository {
         const client = await pool.connect();
         try {
             await client.query("BEGIN");
+            await client.query("SELECT id FROM usuario WHERE id = $1 FOR UPDATE", [userId]);
             const previous = await client.query<{ s3_ruta: string }>(
                 `SELECT s3_ruta FROM documentos_usuarios
                  WHERE usuario_id = $1 AND tipo_documento = $2
