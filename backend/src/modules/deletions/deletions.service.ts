@@ -1,6 +1,6 @@
 import type { PoolClient } from "pg";
 import { pool } from "../../database/database.js";
-import { drainStorageCleanup, ensureStorageCleanup } from "../storage/storage-cleanup.js";
+import { drainStorageCleanup } from "../storage/storage-cleanup.js";
 
 export class DeletionError extends Error {
     constructor(message: string, public readonly status: number) { super(message); }
@@ -67,7 +67,6 @@ async function removeLegalRecord(client: PoolClient, vehicleId: number, kind: Le
 }
 
 async function transaction(work: (client: PoolClient) => Promise<void>): Promise<void> {
-    await ensureStorageCleanup();
     const client = await pool.connect();
     try {
         await client.query("BEGIN");

@@ -1,25 +1,11 @@
 import { pool } from "../../database/database.js";
 import { StorageService } from "./storage.service.js";
 
-// Durable outbox: database deletion and cleanup scheduling commit together.
-// Initialization is additive and idempotent; no existing tables are changed.
-let initialized: Promise<unknown> | undefined;
-export function ensureStorageCleanup(): Promise<unknown> {
-    initialized ??= pool.query(`CREATE TABLE IF NOT EXISTS storage_deletion_queue (
-        object_key text PRIMARY KEY,
-        attempts integer NOT NULL DEFAULT 0,
-        next_attempt_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        created_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )`).catch((error: unknown) => { initialized = undefined; throw error; });
-    return initialized;
-}
-
 let running = false;
 export async function drainStorageCleanup(): Promise<void> {
     if (running) return;
     running = true;
     try {
-        await ensureStorageCleanup();
         for (let index = 0; index < 20; index++) {
             const client = await pool.connect();
             try {
