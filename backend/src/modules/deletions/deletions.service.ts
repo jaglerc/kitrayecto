@@ -17,9 +17,9 @@ const quote = (name: string): string => `"${name.replaceAll('"', '""')}"`;
 export async function assertUnreferenced(client: PoolClient, table: string, id: number): Promise<void> {
     const references = await client.query<{ schema_name: string; table_name: string; columns: string[]; target_columns: string[] }>(
         `SELECT ns.nspname AS schema_name, rel.relname AS table_name,
-            ARRAY(SELECT a.attname FROM unnest(c.conkey) WITH ORDINALITY k(num, ord)
+            ARRAY(SELECT a.attname::text FROM unnest(c.conkey) WITH ORDINALITY k(num, ord)
                   JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.num ORDER BY k.ord) AS columns,
-            ARRAY(SELECT a.attname FROM unnest(c.confkey) WITH ORDINALITY k(num, ord)
+            ARRAY(SELECT a.attname::text FROM unnest(c.confkey) WITH ORDINALITY k(num, ord)
                   JOIN pg_attribute a ON a.attrelid = c.confrelid AND a.attnum = k.num ORDER BY k.ord) AS target_columns
          FROM pg_constraint c JOIN pg_class rel ON rel.oid = c.conrelid
          JOIN pg_namespace ns ON ns.oid = rel.relnamespace
@@ -56,14 +56,12 @@ const legalTables = {
     "technical-inspections": { record: "revisiones_tecnicomecanicas", documents: "documentos_tecnomecanica", foreignKey: "tecnico_id" },
 } as const;
 
-async function removeLegalRecord(client: PoolClient, vehicleId: number, kind: LegalRecordKind, id: number, documentOnly: boolean): Promise<void> {
+async function removeLegalRecord(client: PoolClient, vehicleId: number, kind: LegalRecordKind, id: number): Promise<void> {
     const tables = legalTables[kind];
     await lockRecord(client, tables.record, id, "carro_id", vehicleId);
     await removeDocuments(client, tables.documents, tables.foreignKey, id);
-    if (!documentOnly) {
-        await assertUnreferenced(client, tables.record, id);
-        await client.query(`DELETE FROM ${quote(tables.record)} WHERE id = $1`, [id]);
-    }
+    await assertUnreferenced(client, tables.record, id);
+    await client.query(`DELETE FROM ${quote(tables.record)} WHERE id = $1`, [id]);
 }
 
 async function transaction(work: (client: PoolClient) => Promise<void>): Promise<void> {
@@ -98,11 +96,11 @@ export class DeletionsService {
         });
     }
 
-    static async legalRecord(vehicleId: number, kind: LegalRecordKind, id: number, documentOnly: boolean): Promise<void> {
+    static async legalRecord(vehicleId: number, kind: LegalRecordKind, id: number): Promise<void> {
         validateDeletionId(vehicleId); validateDeletionId(id);
         await transaction(async (client) => {
             await lockRecord(client, "vehiculo", vehicleId);
-            await removeLegalRecord(client, vehicleId, kind, id, documentOnly);
+            await removeLegalRecord(client, vehicleId, kind, id);
         });
     }
 }

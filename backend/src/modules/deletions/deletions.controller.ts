@@ -17,15 +17,9 @@ export class DeletionsController {
         return respond(res, () => DeletionsService.userDocument(Number(req.params.userId), Number(req.params.documentId)));
     }
     static insurance(req: Request, res: Response): Promise<void> {
-        return respond(res, () => DeletionsService.legalRecord(Number(req.params.vehicleId), "insurance", Number(req.params.recordId), false));
-    }
-    static insuranceDocument(req: Request, res: Response): Promise<void> {
-        return respond(res, () => DeletionsService.legalRecord(Number(req.params.vehicleId), "insurance", Number(req.params.recordId), true));
+        return respond(res, () => DeletionsService.legalRecord(Number(req.params.vehicleId), "insurance", Number(req.params.recordId)));
     }
     static technical(req: Request, res: Response): Promise<void> {
-        return respond(res, () => DeletionsService.legalRecord(Number(req.params.vehicleId), "technical-inspections", Number(req.params.recordId), false));
-    }
-    static technicalDocument(req: Request, res: Response): Promise<void> {
-        return respond(res, () => DeletionsService.legalRecord(Number(req.params.vehicleId), "technical-inspections", Number(req.params.recordId), true));
+        return respond(res, () => DeletionsService.legalRecord(Number(req.params.vehicleId), "technical-inspections", Number(req.params.recordId)));
     }
 }

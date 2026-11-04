@@ -13,6 +13,6 @@ async function remove(path: string): Promise<void> {
 
 export const deletionService = {
     userDocument: (id: number, documentId: number) => remove(`users/${id}/documents/${documentId}`),
-    legalRecord: (id: number, kind: "insurance" | "technical-inspections", recordId: number, documentOnly = false) =>
-        remove(`vehicles/${id}/${kind}/${recordId}${documentOnly ? "/document" : ""}`),
+    legalRecord: (id: number, kind: "insurance" | "technical-inspections", recordId: number) =>
+        remove(`vehicles/${id}/${kind}/${recordId}`),
 };
