@@ -245,7 +245,6 @@ function LegalDocuments({ vehicle, insurances, technicalInspection, onInsurances
                         expiresAt: item.expiresAt,
                         status: item.status,
                         url: item.document?.downloadUrl,
-                        hasDocument: Boolean(item.document),
                     }))}
                 />
                 <History
@@ -261,7 +260,6 @@ function LegalDocuments({ vehicle, insurances, technicalInspection, onInsurances
                         expiresAt: item.expiresAt,
                         status: item.status,
                         url: item.document?.downloadUrl,
-                        hasDocument: Boolean(item.document),
                     }))}
                 />
             </div>
@@ -289,7 +287,7 @@ function LegalDocumentForm({ title, draft, onDraftChange, includeProvider = fals
 
 function History({ title, rows, vehicle, kind, busy, onChange, onError }: {
     title: string;
-    rows: Array<{ id: number; name: string; expiresAt: string | null; status: DocumentStatus; url?: string; hasDocument: boolean }>;
+    rows: Array<{ id: number; name: string; expiresAt: string | null; status: DocumentStatus; url?: string }>;
     vehicle: SupervisorVehicle;
     kind: "insurance" | "technical-inspections";
     busy: boolean;
@@ -336,18 +334,8 @@ function History({ title, rows, vehicle, kind, busy, onChange, onError }: {
                                     Abrir PDF
                                 </a>
                             )}
-                            {row.hasDocument && (
-                                <DeleteAction
-                                    label="Eliminar solo PDF"
-                                    title="Eliminar archivo PDF"
-                                    description={`Se quitará el PDF de ${row.name} del vehículo ${vehicle.plate}. Si el PDF es obligatorio, el vehículo podría quedar inhabilitado para iniciar jornadas.`}
-                                    disabled={busy}
-                                    onDelete={() => deletionService.legalRecord(vehicle.id, kind, row.id, true)}
-                                    onDeleted={refresh}
-                                />
-                            )}
                             <DeleteAction
-                                label="Eliminar registro"
+                                label={deleteTitle}
                                 title={deleteTitle}
                                 description={`Se eliminará ${row.name} del vehículo ${vehicle.plate}, junto con sus datos y archivos.`}
                                 disabled={busy}
