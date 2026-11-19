@@ -5,9 +5,17 @@ export interface TripProductInput {
 }
 
 export interface CreateTripInput {
+    originId: number;
     observations?: string;
     products: TripProductInput[];
+    stops: Array<{ locationId: number; movements: Array<TripCargoMovementInput> }>;
 }
+
+export interface TripCargoMovementInput extends TripProductInput {
+    type: "Recogida" | "Entrega";
+}
+
+export interface TripLocation { id: number; name: string; }
 
 export interface TripVehicle {
     id: number;
@@ -31,4 +39,5 @@ export interface TripStatus {
     nextTripNumber: number;
     canStart: boolean;
     canCheckout: boolean;
+    suggestedOriginId: number | null;
 }

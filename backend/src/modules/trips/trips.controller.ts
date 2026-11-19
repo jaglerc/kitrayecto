@@ -4,6 +4,15 @@ import { TripConflictError, TripNotFoundError, TripsService, TripValidationError
 import type { CreateTripInput } from "./trips.types.js";
 
 export class TripsController {
+    static async findLocations(_req: Request, res: Response): Promise<void> {
+        try {
+            res.status(200).json(await TripsService.findLocations());
+        } catch (error) {
+            console.error("No fue posible consultar las ubicaciones:", error);
+            res.status(500).json({ message: "No fue posible consultar las ubicaciones" });
+        }
+    }
+
     static async findStatus(_req: Request, res: Response): Promise<void> {
         try {
             const user = res.locals.user as AuthenticatedUser;
