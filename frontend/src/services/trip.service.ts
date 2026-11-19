@@ -11,11 +11,15 @@ export interface TripStatus {
     nextTripNumber: number;
     canStart: boolean;
     canCheckout: boolean;
+    suggestedOriginId: number | null;
 }
 export interface CreateTripRequest {
+    originId: number;
     observations: string;
     products: Array<{ productName: string; unit: string; quantity: number }>;
+    stops: Array<{ locationId: number; movements: Array<{ productName: string; unit: string; quantity: number; type: "Recogida" | "Entrega" }> }>;
 }
+export interface TripLocation { id: number; name: string; }
 
 const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:3000").replace(/\/+$/, "");
 const headers = () => {
@@ -27,6 +31,11 @@ const errorMessage = async (response: Response, fallback: string) => {
 };
 
 export const tripService = {
+    async findLocations(): Promise<TripLocation[]> {
+        const response = await fetch(`${API_URL}/trips/locations`, { headers: headers() });
+        if (!response.ok) throw new Error(await errorMessage(response, "No fue posible consultar las ubicaciones"));
+        return response.json();
+    },
     async findStatus(): Promise<TripStatus> {
         const response = await fetch(`${API_URL}/trips/status`, { headers: headers() });
         if (!response.ok) throw new Error(await errorMessage(response, "No fue posible consultar el viaje"));
