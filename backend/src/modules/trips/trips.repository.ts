@@ -7,6 +7,7 @@ interface CheckInRecord {
     tipo_vehiculo: string;
     placa: string;
     estado: string;
+    suggested_origin_id: number | null;
 }
 
 interface ActiveTripRecord {
@@ -27,16 +28,43 @@ const toVehicle = (record: { vehiculo_id: number; tipo_vehiculo: string; placa: 
 export class TripsRepository {
     static async findLocations(): Promise<TripLocation[]> {
         const result = await pool.query<{ id: number; nombre: string }>(
-            "SELECT id, nombre FROM ubicaciones WHERE activo = TRUE ORDER BY id"
+            `SELECT id, nombre
+             FROM ubicaciones
+             WHERE activo = TRUE
+             ORDER BY id`
         );
         return result.rows.map((row) => ({ id: row.id, name: row.nombre }));
     }
     static async findStatus(conductorId: number): Promise<TripStatus> {
         const [checkInResult, activeResult, completedResult] = await Promise.all([
             pool.query<CheckInRecord>(
-                `SELECT i.vehiculo_id, v.tipo_vehiculo::text AS tipo_vehiculo, v.placa, i.estado::text AS estado
+                `SELECT i.vehiculo_id,
+                        v.tipo_vehiculo::text AS tipo_vehiculo,
+                        v.placa,
+                        i.estado::text AS estado,
+                        ultima_ubicacion.ubicacion_id AS suggested_origin_id
                  FROM inspecciones_vehiculares i
                  JOIN vehiculo v ON v.id = i.vehiculo_id
+                 LEFT JOIN LATERAL (
+                     SELECT COALESCE(
+                         (
+                             SELECT p.ubicacion_id
+                             FROM trayectos t
+                             JOIN paradas_trayecto p ON p.trayecto_id = t.id
+                             WHERE t.vehiculo_id = v.id
+                             ORDER BY t.fecha_inicio DESC, p.orden DESC
+                             LIMIT 1
+                         ),
+                         (
+                             SELECT t.origen_id
+                             FROM trayectos t
+                             WHERE t.vehiculo_id = v.id
+                               AND t.origen_id IS NOT NULL
+                             ORDER BY t.fecha_inicio DESC
+                             LIMIT 1
+                         )
+                     ) AS ubicacion_id
+                 ) ultima_ubicacion ON TRUE
                  WHERE i.conductor_id = $1
                    AND i.tipo_operacion::text = 'Check_in'
                    AND i.created_at::date = (CURRENT_TIMESTAMP AT TIME ZONE 'America/Bogota')::date
@@ -88,14 +116,6 @@ export class TripsRepository {
             vehicle: toVehicle(active),
         } : null;
         const checkInAuthorized = Boolean(checkIn && !checkIn.estado.toLowerCase().includes("cr"));
-        const lastLocation = checkIn ? await pool.query<{ ubicacion_id: number }>(
-            `SELECT COALESCE(
-                (SELECT p.ubicacion_id FROM trayectos t JOIN paradas_trayecto p ON p.trayecto_id = t.id
-                 WHERE t.vehiculo_id = $1 ORDER BY t.fecha_inicio DESC, p.orden DESC LIMIT 1),
-                (SELECT t.origen_id FROM trayectos t WHERE t.vehiculo_id = $1 AND t.origen_id IS NOT NULL
-                 ORDER BY t.fecha_inicio DESC LIMIT 1)
-             ) AS ubicacion_id`, [checkIn.vehiculo_id]
-        ) : null;
 
         return {
             hasCheckIn: Boolean(checkIn),
@@ -106,7 +126,7 @@ export class TripsRepository {
             nextTripNumber: completedToday + (active ? 1 : 0) + 1,
             canStart: Boolean(checkIn && checkInAuthorized && !active),
             canCheckout: Boolean(checkIn && checkInAuthorized && completedToday > 0 && !active),
-            suggestedOriginId: lastLocation?.rows[0]?.ubicacion_id ?? null,
+            suggestedOriginId: checkIn?.suggested_origin_id ?? null,
         };
     }
 

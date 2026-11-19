@@ -11,7 +11,9 @@ export interface CreateTripInput {
     stops: Array<{ locationId: number; movements: Array<TripCargoMovementInput> }>;
 }
 
-export interface TripCargoMovementInput extends TripProductInput { type: "Recogida" | "Entrega"; }
+export interface TripCargoMovementInput extends TripProductInput {
+    type: "Recogida" | "Entrega";
+}
 
 export interface TripLocation { id: number; name: string; }
 
