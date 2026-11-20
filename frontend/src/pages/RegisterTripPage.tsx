@@ -140,10 +140,14 @@ export default function RegisterTripPage() {
                 })),
             };
 
-            await offlineSyncService.enqueueAndSync("trip", {
-                input,
-                vehicle: status?.vehicle ?? null,
-            });
+            if (navigator.onLine) {
+                await tripService.create(input);
+            } else {
+                await offlineSyncService.enqueue("trip", {
+                    input,
+                    vehicle: status?.vehicle ?? null,
+                });
+            }
 
             navigate("/home");
         } catch (requestError) {
