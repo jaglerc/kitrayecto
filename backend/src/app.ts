@@ -15,6 +15,7 @@ import supervisorUsersRouter from "./modules/supervisor-users/supervisor-users.r
 import supervisorVehiclesRouter from "./modules/supervisor-vehicles/supervisor-vehicles.router.js";
 import supervisorIncidentsRouter from "./modules/supervisor-incidents/supervisor-incidents.router.js";
 import maintenanceRouter from "./modules/maintenance/maintenance.router.js";
+import supervisorCostsRouter from "./modules/supervisor-costs/supervisor-costs.router.js";
 const app = express();
 
 app.use(cors({
@@ -41,4 +42,5 @@ app.use("/supervisor/users", supervisorUsersRouter);
 app.use("/supervisor/vehicles", supervisorVehiclesRouter);
 app.use("/supervisor/incidents", supervisorIncidentsRouter);
 app.use("/maintenance", maintenanceRouter);
+app.use("/supervisor/costs", supervisorCostsRouter);
 export default app;
