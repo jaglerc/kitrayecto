@@ -112,10 +112,15 @@ export default function Home() {
         setIsFinishingTrip(true);
         setTripActionError(null);
         try {
-            await offlineSyncService.enqueueAndSync("finish-trip", {
-                tripId: tripStatus.activeTrip.id > 0 ? tripStatus.activeTrip.id : null,
-                tripOperationId: tripStatus.activeTrip.clientOperationId ?? null,
-            });
+            const activeTrip = tripStatus.activeTrip;
+            if (navigator.onLine && activeTrip.id > 0) {
+                await tripService.finish(activeTrip.id);
+            } else {
+                await offlineSyncService.enqueueAndSync("finish-trip", {
+                    tripId: activeTrip.id > 0 ? activeTrip.id : null,
+                    tripOperationId: activeTrip.clientOperationId ?? null,
+                });
+            }
             setTripStatus(await tripService.findStatus());
             setShowFinishTrip(false);
         } catch (requestError) {
