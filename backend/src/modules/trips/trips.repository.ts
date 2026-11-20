@@ -10,6 +10,8 @@ interface CheckInRecord {
     suggested_origin_id: number | null;
 }
 
+type CheckedInVehicleRecord = Pick<CheckInRecord, "vehiculo_id" | "tipo_vehiculo" | "placa">;
+
 interface ActiveTripRecord {
     id: number;
     fecha_inicio: Date;
@@ -26,6 +28,35 @@ const toVehicle = (record: { vehiculo_id: number; tipo_vehiculo: string; placa: 
 });
 
 export class TripsRepository {
+    static async findCheckedInVehicle(conductorId: number): Promise<TripVehicle | null> {
+        const result = await pool.query<CheckedInVehicleRecord>(
+            `SELECT i.vehiculo_id,
+                    v.tipo_vehiculo::text AS tipo_vehiculo,
+                    v.placa
+             FROM inspecciones_vehiculares i
+             JOIN vehiculo v ON v.id = i.vehiculo_id
+             WHERE i.conductor_id = $1
+               AND i.tipo_operacion::text = 'Check_in'
+               AND i.created_at::date = (CURRENT_TIMESTAMP AT TIME ZONE 'America/Bogota')::date
+               AND NOT EXISTS (
+                   SELECT 1
+                   FROM inspecciones_vehiculares checkout
+                   WHERE checkout.conductor_id = i.conductor_id
+                     AND checkout.vehiculo_id = i.vehiculo_id
+                     AND checkout.tipo_operacion::text = 'Check_out'
+                     AND checkout.created_at > i.created_at
+               )
+             ORDER BY i.created_at DESC
+             LIMIT 1`,
+            [conductorId]
+        );
+
+        const row = result.rows[0];
+        if (!row) return null;
+
+        return toVehicle(row);
+    }
+
     static async findLocations(): Promise<TripLocation[]> {
         const result = await pool.query<{ id: number; nombre: string }>(
             `SELECT id, nombre

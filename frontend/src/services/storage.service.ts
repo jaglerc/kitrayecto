@@ -3,6 +3,7 @@ export type StorageModule =
     | "novedades"
     | "accidentes"
     | "combustible"
+    | "mantenimientos"
     | "usuarios"
     | "vehiculos";
 

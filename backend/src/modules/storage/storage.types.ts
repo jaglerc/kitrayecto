@@ -3,6 +3,7 @@ export const storageModules = [
     "novedades",
     "accidentes",
     "combustible",
+    "mantenimientos",
     "usuarios",
     "vehiculos",
 ] as const;
