@@ -7,6 +7,7 @@ import type { InspectionAnswer, InspectionTemplate, TodayInspection } from "../s
 import { inspectionService } from "../services/inspection.service";
 import { tripService } from "../services/trip.service";
 import { offlineSyncService } from "../services/offline-sync.service";
+import { storageService } from "../services/storage.service";
 
 export default function CheckoutJourneyPage() {
     const navigate = useNavigate();
@@ -43,10 +44,10 @@ export default function CheckoutJourneyPage() {
         if (!checkIn || !isComplete || isSaving) return;
         setIsSaving(true); setError(null);
         try {
-            await offlineSyncService.enqueueAndSync("check-out", {
+            const payload = {
                 vehicleId: checkIn.vehicle.id,
                 vehicle: checkIn.vehicle,
-                operation: "Check_out",
+                operation: "Check_out" as const,
                 mileage: Number(mileage),
                 answers: templates.map((template) => {
                     const answer = answers[template.id];
@@ -57,7 +58,26 @@ export default function CheckoutJourneyPage() {
                         files: answer.evidenceFiles.map((evidence) => evidence.file),
                     };
                 }),
-            });
+            };
+
+            if (navigator.onLine) {
+                const uploadedAnswers = await Promise.all(
+                    payload.answers.map(async ({ files, ...answer }) => ({
+                        ...answer,
+                        evidences: await Promise.all(files.map((file) =>
+                            storageService.uploadFile(file, "inspecciones", payload.vehicleId)
+                        )),
+                    }))
+                );
+                await inspectionService.create({
+                    vehicleId: payload.vehicleId,
+                    operation: payload.operation,
+                    mileage: payload.mileage,
+                    answers: uploadedAnswers,
+                });
+            } else {
+                await offlineSyncService.enqueue("check-out", payload);
+            }
             navigate("/home");
         } catch (requestError) {
             setError(requestError instanceof Error ? requestError.message : "No fue posible finalizar la jornada");
