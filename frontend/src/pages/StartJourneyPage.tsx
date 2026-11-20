@@ -16,6 +16,7 @@ import type {
 import { vehicleService } from "../services/vehicle.service";
 import type { Vehicle } from "../services/vehicle.service";
 import { offlineSyncService } from "../services/offline-sync.service";
+import { storageService } from "../services/storage.service";
 
 type JourneyStep = 1 | 2 | 3;
 
@@ -197,18 +198,10 @@ export default function StartJourneyPage() {
         setIsSaving(true);
         setSaveError(null);
         try {
-            const todayInspection = navigator.onLine
-                ? await inspectionService.findToday()
-                : null;
-            if (todayInspection) {
-                navigate("/home");
-                return;
-            }
-
-            const operation = await offlineSyncService.enqueueAndSync("check-in", {
+            const payload = {
                 vehicleId: selectedVehicleId,
                 vehicle: selectedVehicle,
-                operation: "Check_in",
+                operation: "Check_in" as const,
                 mileage: Number(mileage),
                 answers: templates.map((template) => {
                     const answer = answers[template.id];
@@ -219,9 +212,33 @@ export default function StartJourneyPage() {
                         files: answer.evidenceFiles.map((evidence) => evidence.file),
                     };
                 }),
-            });
-            const result = operation.result as { id?: number } | null;
-            setSavedInspectionId(result?.id ?? null);
+            };
+
+            if (navigator.onLine) {
+                const todayInspection = await inspectionService.findToday();
+                if (todayInspection) {
+                    navigate("/home");
+                    return;
+                }
+
+                const uploadedAnswers = await Promise.all(
+                    payload.answers.map(async ({ files, ...answer }) => ({
+                        ...answer,
+                        evidences: await Promise.all(files.map((file) =>
+                            storageService.uploadFile(file, "inspecciones", payload.vehicleId)
+                        )),
+                    }))
+                );
+                const inspection = await inspectionService.create({
+                    vehicleId: payload.vehicleId,
+                    operation: payload.operation,
+                    mileage: payload.mileage,
+                    answers: uploadedAnswers,
+                });
+                setSavedInspectionId(inspection.id);
+            } else {
+                await offlineSyncService.enqueue("check-in", payload);
+            }
             navigate("/home");
         } catch (requestError: unknown) {
             setSaveError(
