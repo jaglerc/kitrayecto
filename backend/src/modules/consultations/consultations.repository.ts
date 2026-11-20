@@ -5,8 +5,6 @@ import type {
     ConsultationListItem,
 } from "./consultations.types.js";
 
-type SupportedCategory = Exclude<ConsultationCategory, "maintenance">;
-
 interface ListRow {
     id: number;
     occurred_at: Date;
@@ -374,20 +372,78 @@ const accidentsDetailQuery = `
       AND t.conductor_id = $2
 `;
 
-const listQueries: Record<SupportedCategory, string> = {
+const maintenanceListQuery = `
+    SELECT
+        m.id,
+        m.fecha_servicio::timestamp AS occurred_at,
+        m.tipo_servicio || CASE
+            WHEN m.tipo_servicio = 'Otro' THEN ' · ' || m.categoria
+            ELSE ''
+        END AS title,
+        m.descripcion AS subtitle,
+        m.estado AS status,
+        v.tipo_vehiculo::text AS vehicle_type,
+        v.placa AS plate
+    FROM mantenimientos_vehiculo m
+    JOIN vehiculo v ON v.id = m.vehiculo_id
+    WHERE m.registrado_por = $1
+    ORDER BY m.fecha_servicio DESC, m.id DESC
+`;
+
+const maintenanceDetailQuery = `
+    SELECT
+        m.id,
+        m.fecha_servicio::timestamp AS occurred_at,
+        m.tipo_servicio || CASE
+            WHEN m.tipo_servicio = 'Otro' THEN ' · ' || m.categoria
+            ELSE ''
+        END AS title,
+        m.descripcion AS subtitle,
+        m.estado AS status,
+        v.tipo_vehiculo::text AS vehicle_type,
+        v.placa AS plate,
+        json_build_array(
+            json_build_object('label', 'Tipo de servicio', 'value', m.tipo_servicio),
+            json_build_object('label', 'Clase', 'value', m.clase_servicio),
+            json_build_object('label', 'Categoría', 'value', m.categoria),
+            json_build_object('label', 'Fecha', 'value', to_char(m.fecha_servicio, 'DD/MM/YYYY')),
+            json_build_object('label', 'Kilometraje', 'value', COALESCE(m.kilometraje::text || ' km', 'No registrado')),
+            json_build_object('label', 'Proveedor', 'value', COALESCE(m.proveedor, 'No registrado')),
+            json_build_object('label', 'Descripción', 'value', m.descripcion),
+            json_build_object('label', 'Costo', 'value', '$' || m.costo),
+            json_build_object('label', 'Próxima fecha', 'value', COALESCE(to_char(m.proxima_fecha, 'DD/MM/YYYY'), 'No definida')),
+            json_build_object('label', 'Próximo kilometraje', 'value', COALESCE(m.proximo_kilometraje::text || ' km', 'No definido')),
+            json_build_object('label', 'Observaciones', 'value', COALESCE(m.observaciones, 'Sin observaciones'))
+        ) AS fields,
+        CASE
+            WHEN m.comprobante_s3_ruta IS NULL THEN '[]'::json
+            ELSE json_build_array(json_build_object(
+                'fileName', m.comprobante_nombre_archivo,
+                'objectKey', m.comprobante_s3_ruta
+            ))
+        END AS evidences
+    FROM mantenimientos_vehiculo m
+    JOIN vehiculo v ON v.id = m.vehiculo_id
+    WHERE m.id = $1
+      AND m.registrado_por = $2
+`;
+
+const listQueries: Record<ConsultationCategory, string> = {
     trips: tripsListQuery,
     fuel: fuelListQuery,
     inspections: inspectionsListQuery,
     incidents: incidentsListQuery,
     accidents: accidentsListQuery,
+    maintenance: maintenanceListQuery,
 };
 
-const detailQueries: Record<SupportedCategory, string> = {
+const detailQueries: Record<ConsultationCategory, string> = {
     trips: tripDetailQuery,
     fuel: fuelDetailQuery,
     inspections: inspectionsDetailQuery,
     incidents: incidentsDetailQuery,
     accidents: accidentsDetailQuery,
+    maintenance: maintenanceDetailQuery,
 };
 
 export class ConsultationsRepository {
@@ -395,8 +451,6 @@ export class ConsultationsRepository {
         conductorId: number,
         category: ConsultationCategory
     ): Promise<ConsultationListItem[]> {
-        if (category === "maintenance") return [];
-
         const result = await pool.query<ListRow>(listQueries[category], [conductorId]);
         return result.rows.map((row) => listItem(category, row));
     }
@@ -406,8 +460,6 @@ export class ConsultationsRepository {
         category: ConsultationCategory,
         id: number
     ): Promise<ConsultationDetail | null> {
-        if (category === "maintenance") return null;
-
         const result = await pool.query<DetailRow>(detailQueries[category], [id, conductorId]);
         const row = result.rows[0];
 
