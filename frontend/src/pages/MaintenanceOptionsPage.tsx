@@ -8,15 +8,14 @@ import TripHeaderSummary from "../components/ui/TripHeaderSummary";
 import fumigationIcon from "../icons/warning-sign.png";
 import maintenanceIcon from "../icons/support.png";
 import oilIcon from "../icons/cost.png";
-import { maintenanceService } from "../services/maintenance.service";
 import type {
     MaintenanceClass,
     MaintenanceServiceType,
     MaintenanceStatus,
 } from "../services/maintenance.service";
-import { storageService } from "../services/storage.service";
 import { tripService } from "../services/trip.service";
 import type { TripStatus } from "../services/trip.service";
+import { offlineSyncService } from "../services/offline-sync.service";
 
 const serviceOptions: Array<{
     value: MaintenanceServiceType;
@@ -67,7 +66,6 @@ export default function MaintenanceOptionsPage() {
     const [status, setStatus] = useState<MaintenanceStatus>("Realizado");
     const [observations, setObservations] = useState("");
     const [evidence, setEvidence] = useState<File | null>(null);
-    const [savedId, setSavedId] = useState<number | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
 
@@ -103,30 +101,22 @@ export default function MaintenanceOptionsPage() {
         setError(null);
 
         try {
-            let maintenanceId = savedId;
-            if (maintenanceId === null) {
-                const created = await maintenanceService.create({
-                    serviceType: selectedService,
-                    serviceClass,
-                    category: selectedService === "Otro" && category === "General" ? otherCategory : category,
-                    serviceDate,
-                    mileage: mileage === "" ? null : Number(mileage),
-                    provider: provider.trim(),
-                    description: description.trim(),
-                    cost: Number(cost),
-                    nextServiceDate: nextServiceDate || null,
-                    nextServiceMileage: nextServiceMileage === "" ? null : Number(nextServiceMileage),
-                    status,
-                    observations: observations.trim(),
-                });
-                maintenanceId = created.id;
-                setSavedId(created.id);
-            }
+            const input = {
+                serviceType: selectedService,
+                serviceClass,
+                category: selectedService === "Otro" && category === "General" ? otherCategory : category,
+                serviceDate,
+                mileage: mileage === "" ? null : Number(mileage),
+                provider: provider.trim(),
+                description: description.trim(),
+                cost: Number(cost),
+                nextServiceDate: nextServiceDate || null,
+                nextServiceMileage: nextServiceMileage === "" ? null : Number(nextServiceMileage),
+                status,
+                observations: observations.trim(),
+            };
 
-            if (evidence && maintenanceId !== null) {
-                const uploaded = await storageService.uploadFile(evidence, "mantenimientos", maintenanceId);
-                await maintenanceService.attachEvidence(maintenanceId, uploaded);
-            }
+            await offlineSyncService.enqueueAndSync("maintenance", { input, receipt: evidence });
 
             navigate("/home");
         } catch (requestError) {
@@ -186,7 +176,7 @@ export default function MaintenanceOptionsPage() {
                                             <p className="text-xs text-gray-500">Servicio seleccionado</p>
                                             <h2 className="text-lg font-bold text-gray-900">{selectedService === "Otro" ? "Otro mantenimiento" : selectedService}</h2>
                                         </div>
-                                        {!savedId && <button type="button" onClick={() => setSelectedService(null)} className="min-h-10 rounded-lg px-3 text-sm font-medium text-amber-700 hover:bg-amber-50">Cambiar servicio</button>}
+                                        <button type="button" onClick={() => setSelectedService(null)} className="min-h-10 rounded-lg px-3 text-sm font-medium text-amber-700 hover:bg-amber-50">Cambiar servicio</button>
                                     </div>
 
                                     <fieldset>
@@ -274,9 +264,8 @@ export default function MaintenanceOptionsPage() {
                                         <span className="mt-1 block text-right text-xs font-normal text-gray-400">{observations.length}/300</span>
                                     </label>
 
-                                    {savedId !== null && <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">El mantenimiento ya se guardó. Puedes reintentar la carga del comprobante.</p>}
                                     <button type="button" onClick={() => void save()} disabled={!canSave || isSaving} className="min-h-12 w-full rounded-xl bg-amber-400 px-4 text-sm font-bold text-gray-900 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-50">
-                                        {isSaving ? "Guardando…" : savedId ? "Adjuntar comprobante y finalizar →" : "Registrar mantenimiento →"}
+                                        {isSaving ? "Guardando…" : "Registrar mantenimiento →"}
                                     </button>
                                 </section>
                             )}

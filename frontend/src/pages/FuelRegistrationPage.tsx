@@ -5,11 +5,10 @@ import FuelReceiptPicker from "../components/ui/FuelReceiptPicker";
 import JourneyHeader from "../components/ui/JourneyHeader";
 import TripHeaderSummary from "../components/ui/TripHeaderSummary";
 import calendarIcon from "../icons/calendar-trip.svg";
-import { fuelService } from "../services/fuel.service";
 import type { FuelType } from "../services/fuel.service";
-import { storageService } from "../services/storage.service";
 import { tripService } from "../services/trip.service";
 import type { TripStatus } from "../services/trip.service";
+import { offlineSyncService } from "../services/offline-sync.service";
 
 const fuelTypes: Array<{ value: FuelType; label: string }> = [{ value: "Gasolina", label: "Gasolina" }, { value: "ACPM", label: "ACPM" }, { value: "Gas", label: "Gas" }, { value: "Electrico", label: "Eléctrico" }];
 
@@ -33,8 +32,20 @@ export default function FuelRegistrationPage() {
         if (!status?.activeTrip || !receipt || !canSave || isSaving) return;
         setIsSaving(true); setError(null);
         try {
-            const evidence = await storageService.uploadImage(receipt, "combustible", status.activeTrip.id);
-            await fuelService.create({ currentMileage: Number(mileage), gallons: Number(gallons), amountPaid: Number(amount), serviceStation: station, fuelType, observations, evidence });
+            const input = {
+                currentMileage: Number(mileage),
+                gallons: Number(gallons),
+                amountPaid: Number(amount),
+                serviceStation: station,
+                fuelType,
+                observations,
+            };
+            await offlineSyncService.enqueueAndSync("fuel", {
+                input,
+                receipt,
+                tripId: status.activeTrip.id > 0 ? status.activeTrip.id : null,
+                tripOperationId: status.activeTrip.clientOperationId ?? null,
+            });
             navigate("/home");
         } catch (requestError) { setError(requestError instanceof Error ? requestError.message : "No fue posible registrar el combustible"); }
         finally { setIsSaving(false); }

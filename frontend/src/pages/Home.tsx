@@ -11,7 +11,12 @@ import FinishTripDialog from "../components/ui/FinishTripDialog";
 import { tripService } from "../services/trip.service";
 import type { TripStatus } from "../services/trip.service";
 import { useNavigate } from "react-router";
-import { accidentService } from "../services/accident.service";
+import { offlineSyncService } from "../services/offline-sync.service";
+import {
+    OFFLINE_QUEUE_CHANGED_EVENT,
+    getOfflineUserId,
+    offlineDatabaseService,
+} from "../services/offline-database.service";
 
 interface UsuarioGuardado {
     id: number;
@@ -26,6 +31,9 @@ export default function Home() {
     const [showFinishTrip, setShowFinishTrip] = useState(false);
     const [isFinishingTrip, setIsFinishingTrip] = useState(false);
     const [tripActionError, setTripActionError] = useState<string | null>(null);
+    const [pendingCount, setPendingCount] = useState(0);
+    const [syncError, setSyncError] = useState<string | null>(null);
+    const [isOnline, setIsOnline] = useState(navigator.onLine);
     const usuarioGuardado = localStorage.getItem("user");
 
     const usuario: UsuarioGuardado | null = usuarioGuardado ?JSON.parse(usuarioGuardado) : null;
@@ -53,12 +61,44 @@ export default function Home() {
         void tripService.findStatus().then(setTripStatus).catch(() => setTripStatus(null));
     }, []);
 
+    useEffect(() => {
+        const refreshQueue = () => {
+            const userId = getOfflineUserId();
+            if (userId) {
+                void Promise.all([
+                    offlineDatabaseService.countPending(userId),
+                    offlineDatabaseService.listOperations(userId),
+                ]).then(([count, operations]) => {
+                    setPendingCount(count);
+                    setSyncError(operations.find((operation) => operation.status === "failed")?.lastError ?? null);
+                });
+            }
+            setIsOnline(navigator.onLine);
+        };
+        const refreshConnection = () => {
+            refreshQueue();
+            void tripService.findStatus().then(setTripStatus).catch(() => undefined);
+        };
+        window.addEventListener(OFFLINE_QUEUE_CHANGED_EVENT, refreshQueue);
+        window.addEventListener("online", refreshConnection);
+        window.addEventListener("offline", refreshQueue);
+        refreshQueue();
+        return () => {
+            window.removeEventListener(OFFLINE_QUEUE_CHANGED_EVENT, refreshQueue);
+            window.removeEventListener("online", refreshConnection);
+            window.removeEventListener("offline", refreshQueue);
+        };
+    }, []);
+
     const finishTrip = async () => {
         if (!tripStatus?.activeTrip || isFinishingTrip) return;
         setIsFinishingTrip(true);
         setTripActionError(null);
         try {
-            await tripService.finish(tripStatus.activeTrip.id);
+            await offlineSyncService.enqueueAndSync("finish-trip", {
+                tripId: tripStatus.activeTrip.id > 0 ? tripStatus.activeTrip.id : null,
+                tripOperationId: tripStatus.activeTrip.clientOperationId ?? null,
+            });
             setTripStatus(await tripService.findStatus());
             setShowFinishTrip(false);
         } catch (requestError) {
@@ -71,8 +111,14 @@ export default function Home() {
     const reportAccident = async () => {
         setTripActionError(null);
         try {
-            const accident = await accidentService.report();
-            navigate(`/accidents/reported/${accident.id}`);
+            if (!tripStatus?.vehicle) throw new Error("No hay un vehículo de jornada guardado en este dispositivo");
+            const operation = await offlineSyncService.enqueueAndSync("accident-report", {
+                    vehicle: tripStatus.vehicle,
+                    driverName: usuario?.nombre ?? "Conductor",
+                    reportedAt: new Date().toISOString(),
+                });
+            const accident = operation.result as { id?: number } | null;
+            navigate(`/accidents/reported/${accident?.id ?? operation.id}`);
         } catch (requestError) {
             setTripActionError(requestError instanceof Error ? requestError.message : "No fue posible reportar el accidente");
         }
@@ -84,6 +130,14 @@ export default function Home() {
         <div className="min-h-dvh bg-white">
             <Header nombre={usuario.nombre} role={usuario.role} />
             <main className="px-2 pb-24 pt-24">
+                {(!isOnline || pendingCount > 0 || syncError) && (
+                    <section className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900" aria-live="polite">
+                        <span>{!isOnline ? "Sin conexión. " : ""}{pendingCount > 0 ? `${pendingCount} registro(s) pendiente(s) de sincronizar.` : "Los registros se guardarán en este dispositivo."}{syncError ? ` Error: ${syncError}` : ""}</span>
+                        {isOnline && pendingCount > 0 && (
+                            <button type="button" onClick={() => void offlineSyncService.retryFailed()} className="font-semibold underline">Reintentar sincronización</button>
+                        )}
+                    </section>
+                )}
                 <div>
                     <WelcomeBanner
                         nombre={usuario.nombre}

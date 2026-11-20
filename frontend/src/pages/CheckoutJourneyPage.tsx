@@ -5,8 +5,8 @@ import InspectionChecklistStep from "../components/ui/InspectionChecklistStep";
 import JourneyHeader from "../components/ui/JourneyHeader";
 import type { InspectionAnswer, InspectionTemplate, TodayInspection } from "../services/inspection.service";
 import { inspectionService } from "../services/inspection.service";
-import { storageService } from "../services/storage.service";
 import { tripService } from "../services/trip.service";
+import { offlineSyncService } from "../services/offline-sync.service";
 
 export default function CheckoutJourneyPage() {
     const navigate = useNavigate();
@@ -43,12 +43,21 @@ export default function CheckoutJourneyPage() {
         if (!checkIn || !isComplete || isSaving) return;
         setIsSaving(true); setError(null);
         try {
-            const uploadedAnswers = await Promise.all(templates.map(async (template) => {
-                const answer = answers[template.id];
-                const evidences = await Promise.all(answer.evidenceFiles.map((evidence) => storageService.uploadImage(evidence.file, "inspecciones", checkIn.vehicle.id)));
-                return { templateId: template.id, status: answer.status, observation: answer.observation, evidences };
-            }));
-            await inspectionService.create({ vehicleId: checkIn.vehicle.id, operation: "Check_out", mileage: Number(mileage), answers: uploadedAnswers });
+            await offlineSyncService.enqueueAndSync("check-out", {
+                vehicleId: checkIn.vehicle.id,
+                vehicle: checkIn.vehicle,
+                operation: "Check_out",
+                mileage: Number(mileage),
+                answers: templates.map((template) => {
+                    const answer = answers[template.id];
+                    return {
+                        templateId: template.id,
+                        status: answer.status,
+                        observation: answer.observation,
+                        files: answer.evidenceFiles.map((evidence) => evidence.file),
+                    };
+                }),
+            });
             navigate("/home");
         } catch (requestError) {
             setError(requestError instanceof Error ? requestError.message : "No fue posible finalizar la jornada");

@@ -47,10 +47,13 @@ const errorMessage = async (response: Response, fallback: string): Promise<strin
 };
 
 export const maintenanceService = {
-    async create(input: CreateMaintenanceInput): Promise<CreatedMaintenance> {
+    async create(input: CreateMaintenanceInput, idempotencyKey?: string): Promise<CreatedMaintenance> {
         const response = await fetch(`${API_URL}/maintenance`, {
             method: "POST",
-            headers: headers(),
+            headers: {
+                ...headers(),
+                ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
+            },
             body: JSON.stringify(input),
         });
 
@@ -61,10 +64,13 @@ export const maintenanceService = {
         return response.json();
     },
 
-    async attachEvidence(id: number, evidence: ConfirmedUpload): Promise<void> {
+    async attachEvidence(id: number, evidence: ConfirmedUpload, idempotencyKey?: string): Promise<void> {
         const response = await fetch(`${API_URL}/maintenance/${id}/evidence`, {
             method: "PATCH",
-            headers: headers(),
+            headers: {
+                ...headers(),
+                ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
+            },
             body: JSON.stringify(evidence),
         });
 

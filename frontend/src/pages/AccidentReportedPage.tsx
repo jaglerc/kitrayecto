@@ -9,6 +9,7 @@ import motocargueroIcon from "../icons/motocarguero.png";
 import warningIcon from "../icons/warning-sign.png";
 import { accidentService } from "../services/accident.service";
 import type { AccidentDetail } from "../services/accident.service";
+import { offlineDatabaseService } from "../services/offline-database.service";
 
 const vehicleData = {
     camioneta: { label: "Camioneta", icon: camionetaIcon },
@@ -24,15 +25,34 @@ function DataRow({ icon, label, value }: DataRowProps) {
 
 export default function AccidentReportedPage() {
     const navigate = useNavigate();
-    const id = Number(useParams().accidentId);
+    const accidentId = useParams().accidentId ?? "";
+    const id = Number(accidentId);
     const [accident, setAccident] = useState<AccidentDetail | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        void accidentService.findById(id)
-            .then(setAccident)
-            .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "No fue posible consultar el reporte"));
-    }, [id]);
+        if (Number.isInteger(id) && id > 0) {
+            void accidentService.findById(id)
+                .then(setAccident)
+                .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "No fue posible consultar el reporte"));
+            return;
+        }
+
+        void offlineDatabaseService.getOperation(accidentId).then((operation) => {
+            if (operation?.type !== "accident-report") throw new Error("No se encontró el reporte local");
+            const payload = operation.payload as { vehicle: AccidentDetail["vehicle"]; driverName: string; reportedAt: string };
+            const user = JSON.parse(localStorage.getItem("user") ?? "{}") as { documento?: string };
+            setAccident({
+                id: -1,
+                reportedAt: payload.reportedAt,
+                vehicle: payload.vehicle,
+                driverName: payload.driverName,
+                driverDocument: user.documento ?? "Pendiente de sincronizar",
+                driverPhone: null,
+                driverEps: null,
+            });
+        }).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "No fue posible consultar el reporte"));
+    }, [id, accidentId]);
 
     const vehicle = accident ? vehicleData[accident.vehicle.type] : null;
 
@@ -43,7 +63,7 @@ export default function AccidentReportedPage() {
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white">
                     <img src={warningIcon} alt="" className="h-8 w-8 object-contain" />
                 </div>
-                <div><h1 className="text-sm font-bold text-gray-900">Se registró la alerta del accidente</h1><p className="mt-1 text-xs leading-relaxed text-gray-600">El reporte quedó disponible para seguimiento.</p></div>
+                <div><h1 className="text-sm font-bold text-gray-900">{Number.isInteger(id) && id > 0 ? "Se registró la alerta del accidente" : "Reporte guardado en este dispositivo"}</h1><p className="mt-1 text-xs leading-relaxed text-gray-600">{Number.isInteger(id) && id > 0 ? "El reporte quedó disponible para seguimiento." : "Se enviará al servidor cuando vuelva la conexión."}</p></div>
             </section>
 
             {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-600">{error}</p>}
@@ -70,7 +90,7 @@ export default function AccidentReportedPage() {
                     <div><p className="text-xs font-bold text-gray-900">Tienes un formulario pendiente.</p><p className="mt-1 text-[11px] leading-relaxed text-gray-600">Completa la información del accidente desde Notificaciones.</p></div>
                 </section>
 
-                <button type="button" onClick={() => navigate("/notifications")} className="w-full rounded-lg bg-amber-400 py-3 text-sm font-semibold text-gray-900 shadow-sm">Ir a notificaciones <span className="ml-2">→</span></button>
+                <button type="button" onClick={() => navigate(Number.isInteger(id) && id > 0 ? "/notifications" : `/accidents/${accidentId}/complete`)} className="w-full rounded-lg bg-amber-400 py-3 text-sm font-semibold text-gray-900 shadow-sm">{Number.isInteger(id) && id > 0 ? "Ir a notificaciones" : "Completar información"}<span className="ml-2">→</span></button>
             </>}
         </main>
         <Footer />
