@@ -29,7 +29,7 @@ const navigationItems: Array<{
     { id: "usuarios", icon: usersIcon, label: "Usuarios", path: "/supervisor/users" },
     { id: "vehiculos", icon: vehicleIcon, label: "Vehículos", path: "/supervisor/vehicles" },
     { id: "novedades", icon: bellIcon, label: "Novedades", path: "/supervisor/incidents" },
-    { id: "costos", icon: costIcon, label: "Costos" },
+    { id: "costos", icon: costIcon, label: "Costos", path: "/supervisor/costs" },
 ];
 
 export default function SupervisorSidebar({
