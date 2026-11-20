@@ -17,6 +17,7 @@ import {
     getOfflineUserId,
     offlineDatabaseService,
 } from "../services/offline-database.service";
+import { offlinePreparationService } from "../services/offline-preparation.service";
 
 interface UsuarioGuardado {
     id: number;
@@ -34,6 +35,8 @@ export default function Home() {
     const [pendingCount, setPendingCount] = useState(0);
     const [syncError, setSyncError] = useState<string | null>(null);
     const [isOnline, setIsOnline] = useState(navigator.onLine);
+    const [isPreparingOffline, setIsPreparingOffline] = useState(false);
+    const [preparationMessage, setPreparationMessage] = useState<string | null>(null);
     const usuarioGuardado = localStorage.getItem("user");
 
     const usuario: UsuarioGuardado | null = usuarioGuardado ?JSON.parse(usuarioGuardado) : null;
@@ -124,6 +127,20 @@ export default function Home() {
         }
     };
 
+    const prepareOfflineUse = async () => {
+        if (isPreparingOffline) return;
+        setIsPreparingOffline(true);
+        setPreparationMessage(null);
+        try {
+            await offlinePreparationService.prepare();
+            setPreparationMessage("Listo. Vehículos, checklists, ubicaciones y jornada guardados para uso sin conexión.");
+        } catch (error) {
+            setPreparationMessage(error instanceof Error ? error.message : "No fue posible preparar los datos");
+        } finally {
+            setIsPreparingOffline(false);
+        }
+    };
+
     if (!usuario) return null;
 
     return (
@@ -136,6 +153,17 @@ export default function Home() {
                         {isOnline && pendingCount > 0 && (
                             <button type="button" onClick={() => void offlineSyncService.retryFailed()} className="font-semibold underline">Reintentar sincronización</button>
                         )}
+                    </section>
+                )}
+                {isOnline && (
+                    <section className="mb-3 rounded-xl border border-gray-200 bg-white p-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-xs text-gray-600">Antes de salir, guarda los datos que necesitarás si pierdes conexión.</p>
+                            <button type="button" onClick={() => void prepareOfflineUse()} disabled={isPreparingOffline} className="min-h-10 rounded-lg bg-gray-900 px-3 text-xs font-semibold text-white disabled:opacity-60">
+                                {isPreparingOffline ? "Preparando…" : "Preparar uso sin conexión"}
+                            </button>
+                        </div>
+                        {preparationMessage && <p role="status" className="mt-2 text-xs text-gray-600">{preparationMessage}</p>}
                     </section>
                 )}
                 <div>
