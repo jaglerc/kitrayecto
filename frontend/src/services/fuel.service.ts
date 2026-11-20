@@ -14,11 +14,18 @@ export interface CreateFuelRequest {
 const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:3000").replace(/\/+$/, "");
 
 export const fuelService = {
-    async create(input: CreateFuelRequest): Promise<{ id: number; tripId: number; createdAt: string }> {
+    async create(
+        input: CreateFuelRequest,
+        idempotencyKey?: string
+    ): Promise<{ id: number; tripId: number; createdAt: string }> {
         const token = localStorage.getItem("token");
         const response = await fetch(`${API_URL}/fuel`, {
             method: "POST",
-            headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+            headers: {
+                "Content-Type": "application/json",
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
+            },
             body: JSON.stringify(input),
         });
         if (!response.ok) {

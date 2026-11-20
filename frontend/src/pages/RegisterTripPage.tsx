@@ -6,6 +6,7 @@ import TripCargoForm from "../components/ui/TripCargoForm";
 import TripHeaderSummary from "../components/ui/TripHeaderSummary";
 import { tripService } from "../services/trip.service";
 import type { TripLocation, TripStatus } from "../services/trip.service";
+import { offlineSyncService } from "../services/offline-sync.service";
 
 type ProductName = "Huevos" | "Alimento balanceado";
 type MovementType = "Recogida" | "Entrega";
@@ -122,7 +123,7 @@ export default function RegisterTripPage() {
         setError(null);
 
         try {
-            await tripService.create({
+            const input = {
                 originId: Number(originId),
                 observations,
                 products: initialCargo,
@@ -137,6 +138,11 @@ export default function RegisterTripPage() {
                             type: movement.type,
                         })),
                 })),
+            };
+
+            await offlineSyncService.enqueueAndSync("trip", {
+                input,
+                vehicle: status?.vehicle ?? null,
             });
 
             navigate("/home");

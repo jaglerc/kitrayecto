@@ -1,4 +1,9 @@
 import type { VehicleType } from "../components/ui/VehicleTypeStep";
+import {
+    getBogotaDateKey,
+    getOfflineUserId,
+    offlineDatabaseService,
+} from "./offline-database.service";
 
 export interface TripVehicle {
     id: number;
@@ -8,6 +13,7 @@ export interface TripVehicle {
 
 export interface ActiveTrip {
     id: number;
+    clientOperationId?: string;
     numberOfDay: number;
     startedAt: string;
     vehicle: TripVehicle;
@@ -63,7 +69,6 @@ const createHeaders = (): HeadersInit => {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
 };
-
 const getErrorMessage = async (
     response: Response,
     fallback: string
@@ -78,39 +83,74 @@ const getErrorMessage = async (
 
 export const tripService = {
     async findLocations(): Promise<TripLocation[]> {
-        const response = await fetch(`${API_URL}/trips/locations`, {
-            headers: createHeaders(),
-        });
+        const userId = getOfflineUserId();
 
-        if (!response.ok) {
-            throw new Error(await getErrorMessage(
-                response,
-                "No fue posible consultar las ubicaciones"
-            ));
+        try {
+            const response = await fetch(`${API_URL}/trips/locations`, {
+                headers: createHeaders(),
+            });
+
+            if (!response.ok) {
+                throw new Error(await getErrorMessage(
+                    response,
+                    "No fue posible consultar las ubicaciones"
+                ));
+            }
+
+            const locations = await response.json() as TripLocation[];
+            if (userId !== null) {
+                await offlineDatabaseService.saveCache(userId, "locations", locations);
+            }
+            return locations;
+        } catch (error) {
+            if (userId !== null && error instanceof TypeError) {
+                const cached = await offlineDatabaseService.readCache<TripLocation[]>(userId, "locations");
+                if (cached) return cached;
+            }
+            throw error;
         }
-
-        return response.json();
     },
 
     async findStatus(): Promise<TripStatus> {
-        const response = await fetch(`${API_URL}/trips/status`, {
-            headers: createHeaders(),
-        });
+        const userId = getOfflineUserId();
 
-        if (!response.ok) {
-            throw new Error(await getErrorMessage(
-                response,
-                "No fue posible consultar el viaje"
-            ));
+        try {
+            const response = await fetch(`${API_URL}/trips/status`, {
+                headers: createHeaders(),
+            });
+
+            if (!response.ok) {
+                throw new Error(await getErrorMessage(
+                    response,
+                    "No fue posible consultar el viaje"
+                ));
+            }
+
+            const status = await response.json() as TripStatus;
+            if (userId !== null) {
+                await offlineDatabaseService.saveCache(userId, "trip-status", {
+                    dayKey: getBogotaDateKey(),
+                    status,
+                });
+            }
+            return status;
+        } catch (error) {
+            if (userId !== null && error instanceof TypeError) {
+                const { offlineDriverStateService } = await import("./offline-driver-state.service");
+                const localStatus = await offlineDriverStateService.getTripStatus();
+                if (localStatus) return localStatus;
+            }
+            throw error;
         }
-
-        return response.json();
     },
 
-    async create(input: CreateTripRequest): Promise<ActiveTrip> {
+    async create(input: CreateTripRequest, idempotencyKey?: string): Promise<ActiveTrip> {
         const response = await fetch(`${API_URL}/trips`, {
             method: "POST",
-            headers: createHeaders(),
+            headers: {
+                ...createHeaders(),
+                ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
+            },
             body: JSON.stringify(input),
         });
 
@@ -124,10 +164,13 @@ export const tripService = {
         return response.json();
     },
 
-    async finish(tripId: number): Promise<void> {
+    async finish(tripId: number, idempotencyKey?: string): Promise<void> {
         const response = await fetch(`${API_URL}/trips/${tripId}/finish`, {
             method: "PATCH",
-            headers: createHeaders(),
+            headers: {
+                ...createHeaders(),
+                ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
+            },
         });
 
         if (!response.ok) {

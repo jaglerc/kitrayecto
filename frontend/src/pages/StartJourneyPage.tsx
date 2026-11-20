@@ -15,7 +15,7 @@ import type {
 } from "../services/inspection.service";
 import { vehicleService } from "../services/vehicle.service";
 import type { Vehicle } from "../services/vehicle.service";
-import { storageService } from "../services/storage.service";
+import { offlineSyncService } from "../services/offline-sync.service";
 
 type JourneyStep = 1 | 2 | 3;
 
@@ -197,41 +197,31 @@ export default function StartJourneyPage() {
         setIsSaving(true);
         setSaveError(null);
         try {
-            const todayInspection = await inspectionService.findToday();
+            const todayInspection = navigator.onLine
+                ? await inspectionService.findToday()
+                : null;
             if (todayInspection) {
                 navigate("/home");
                 return;
             }
 
-            const uploadedAnswers = await Promise.all(
-                templates.map(async (template) => {
+            const operation = await offlineSyncService.enqueueAndSync("check-in", {
+                vehicleId: selectedVehicleId,
+                vehicle: selectedVehicle,
+                operation: "Check_in",
+                mileage: Number(mileage),
+                answers: templates.map((template) => {
                     const answer = answers[template.id];
-                    const evidences = await Promise.all(
-                        answer.evidenceFiles.map((evidence) =>
-                            storageService.uploadImage(
-                                evidence.file,
-                                "inspecciones",
-                                selectedVehicleId
-                            )
-                        )
-                    );
-
                     return {
                         templateId: template.id,
                         status: answer.status,
                         observation: answer.observation,
-                        evidences,
+                        files: answer.evidenceFiles.map((evidence) => evidence.file),
                     };
-                })
-            );
-
-            const inspection = await inspectionService.create({
-                vehicleId: selectedVehicleId,
-                operation: "Check_in",
-                mileage: Number(mileage),
-                answers: uploadedAnswers,
+                }),
             });
-            setSavedInspectionId(inspection.id);
+            const result = operation.result as { id?: number } | null;
+            setSavedInspectionId(result?.id ?? null);
             navigate("/home");
         } catch (requestError: unknown) {
             setSaveError(

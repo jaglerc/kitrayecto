@@ -9,10 +9,14 @@ export default defineConfig({
         tailwindcss(),
         VitePWA({
             registerType: 'autoUpdate',
+            workbox: {
+                globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff,woff2}'],
+            },
             manifest: {
                 name: 'Kitrayecto App',
                 short_name: 'Kitratecto',
                 description: 'App de logística',
+                lang: 'es-CO',
                 icons: [{
                     src: 'logo-kitrayecto.png',
                     sizes: '192x192',

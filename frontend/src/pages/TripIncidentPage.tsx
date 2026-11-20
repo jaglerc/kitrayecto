@@ -5,11 +5,10 @@ import JourneyHeader from "../components/ui/JourneyHeader";
 import TripHeaderSummary from "../components/ui/TripHeaderSummary";
 import TripIncidentEvidencePicker from "../components/ui/TripIncidentEvidencePicker";
 import TripIncidentTypeSelector from "../components/ui/TripIncidentTypeSelector";
-import { storageService } from "../services/storage.service";
-import { tripIncidentService } from "../services/trip-incident.service";
 import type { TripIncidentType } from "../services/trip-incident.service";
 import { tripService } from "../services/trip.service";
 import type { TripStatus } from "../services/trip.service";
+import { offlineSyncService } from "../services/offline-sync.service";
 
 export default function TripIncidentPage() {
     const navigate = useNavigate();
@@ -28,8 +27,12 @@ export default function TripIncidentPage() {
         if (!status?.activeTrip || !canSave || isSaving) return;
         setIsSaving(true); setError(null);
         try {
-            const evidences = await Promise.all(files.map((file) => storageService.uploadImage(file, "novedades", status.activeTrip!.id)));
-            await tripIncidentService.create({ type, description, evidences });
+            await offlineSyncService.enqueueAndSync("incident", {
+                input: { type, description },
+                files,
+                tripId: status.activeTrip.id > 0 ? status.activeTrip.id : null,
+                tripOperationId: status.activeTrip.clientOperationId ?? null,
+            });
             navigate("/home");
         } catch (requestError) { setError(requestError instanceof Error ? requestError.message : "No fue posible registrar la novedad"); }
         finally { setIsSaving(false); }
