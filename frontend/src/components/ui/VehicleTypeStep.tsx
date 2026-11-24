@@ -2,7 +2,7 @@ import camionetaIcon from "../../icons/camioneta.png";
 import motocicletaIcon from "../../icons/motocicleta.png";
 import motocargueroIcon from "../../icons/motocarguero.png";
 import carroIcon from "../../icons/carro.png";
-import camionIcon from "../../icons/lorry.png";
+import camionIcon from "../../icons/camion.png";
 
 export type VehicleType =
     | "camioneta"

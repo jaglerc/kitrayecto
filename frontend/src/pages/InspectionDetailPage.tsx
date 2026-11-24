@@ -7,7 +7,7 @@ import InspectionStatusSummary from "../components/ui/InspectionStatusSummary";
 import JourneyHeader from "../components/ui/JourneyHeader";
 import camionetaIcon from "../icons/camioneta.png";
 import carroIcon from "../icons/carro.png";
-import camionIcon from "../icons/lorry.png";
+import camionIcon from "../icons/camion.png";
 import motocargueroIcon from "../icons/motocarguero.png";
 import motocicletaIcon from "../icons/motocicleta.png";
 import { inspectionService } from "../services/inspection.service";

@@ -2,7 +2,7 @@ import { useNavigate } from "react-router";
 
 import camionetaIcon from "../../icons/camioneta.png";
 import carroIcon from "../../icons/carro.png";
-import camionIcon from "../../icons/lorry.png";
+import camionIcon from "../../icons/camion.png";
 import motocargueroIcon from "../../icons/motocarguero.png";
 import motocicletaIcon from "../../icons/motocicleta.png";
 import type { TodayInspection } from "../../services/inspection.service";
