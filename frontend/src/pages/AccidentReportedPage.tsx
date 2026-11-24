@@ -4,6 +4,7 @@ import Footer from "../components/ui/Footer";
 import JourneyHeader from "../components/ui/JourneyHeader";
 import camionetaIcon from "../icons/camioneta.png";
 import carroIcon from "../icons/carro.png";
+import camionIcon from "../icons/lorry.png";
 import motocicletaIcon from "../icons/motocicleta.png";
 import motocargueroIcon from "../icons/motocarguero.png";
 import warningIcon from "../icons/warning-sign.png";
@@ -13,7 +14,7 @@ import { offlineDatabaseService } from "../services/offline-database.service";
 
 const vehicleData = {
     camioneta: { label: "Camioneta", icon: camionetaIcon },
-    carro: { label: "Carro", icon: carroIcon },
+    "camión": { label: "Camión", icon: camionIcon }, carro: { label: "Carro", icon: carroIcon },
     motocicleta: { label: "Motocicleta", icon: motocicletaIcon },
     motocarguero: { label: "Motocarguero", icon: motocargueroIcon },
 };

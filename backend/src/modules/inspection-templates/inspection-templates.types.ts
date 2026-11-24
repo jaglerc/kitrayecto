@@ -2,12 +2,14 @@ export type InspectionVehicleType =
     | "camioneta"
     | "motocicleta"
     | "motocarguero"
+    | "camión"
     | "carro";
 
 export type DatabaseInspectionVehicleType =
     | "Camioneta"
     | "Motocicleta"
     | "Motocarguero"
+    | "Camión"
     | "Carro";
 
 export interface InspectionTemplateRecord {

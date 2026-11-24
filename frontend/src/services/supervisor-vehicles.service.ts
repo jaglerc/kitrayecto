@@ -1,4 +1,4 @@
-export type VehicleType = "camioneta" | "motocicleta" | "motocarguero" | "carro";
+export type VehicleType = "camioneta" | "motocicleta" | "motocarguero" | "camión" | "carro";
 export type OilStatus = "disabled" | "pending" | "ok" | "upcoming" | "overdue";
 export type FumigationStatus = "not_required" | "pending" | "ok" | "upcoming" | "overdue";
 export type DocumentStatus = "incomplete" | "valid" | "upcoming" | "expired";

@@ -5,13 +5,14 @@ import Footer from "../components/ui/Footer";
 import JourneyHeader from "../components/ui/JourneyHeader";
 import camionetaIcon from "../icons/camioneta.png";
 import carroIcon from "../icons/carro.png";
+import camionIcon from "../icons/lorry.png";
 import motocargueroIcon from "../icons/motocarguero.png";
 import motocicletaIcon from "../icons/motocicleta.png";
 import { inspectionService } from "../services/inspection.service";
 import type { InspectionDetail } from "../services/inspection.service";
 
-const vehicleIcons = { camioneta: camionetaIcon, carro: carroIcon, motocarguero: motocargueroIcon, motocicleta: motocicletaIcon };
-const vehicleLabels = { camioneta: "Camioneta", carro: "Carro", motocarguero: "Motocarguero", motocicleta: "Motocicleta" };
+const vehicleIcons = { camioneta: camionetaIcon, "camión": camionIcon, carro: carroIcon, motocarguero: motocargueroIcon, motocicleta: motocicletaIcon };
+const vehicleLabels = { camioneta: "Camioneta", "camión": "Camión", carro: "Carro", motocarguero: "Motocarguero", motocicleta: "Motocicleta" };
 const isCritical = (status: string) => status.toLowerCase().includes("cr");
 
 export default function InspectionAnswerDetailPage() {
