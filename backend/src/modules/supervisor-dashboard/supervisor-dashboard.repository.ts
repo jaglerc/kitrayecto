@@ -9,7 +9,7 @@ export class SupervisorDashboardRepository {
         const [users, vehicles, alerts, documents] = await Promise.all([
             pool.query<CountRow>(`SELECT COUNT(*)::integer AS total FROM usuario`),
             pool.query<CountRow>(`SELECT COUNT(*)::integer AS total FROM vehiculo`),
-            pool.query<CountRow>(`SELECT COUNT(*)::integer AS total FROM accidentes_trayectos WHERE formulario_completado = FALSE`),
+            pool.query<CountRow>(`SELECT COUNT(*)::integer AS total FROM casos_supervisor c LEFT JOIN LATERAL (SELECT estado FROM seguimiento_novedades WHERE tipo = c.categoria AND registro_id = c.id ORDER BY id DESC LIMIT 1) latest ON true WHERE COALESCE(latest.estado, 'Reportado') <> 'Cerrado'`),
             pool.query<DocumentRow>(
                 `SELECT * FROM (
                     SELECT 'seguro-' || s.id AS id, 'Seguro obligatorio' AS document_type,

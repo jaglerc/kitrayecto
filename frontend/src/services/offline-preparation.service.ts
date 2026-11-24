@@ -7,6 +7,7 @@ const vehicleTypes: VehicleType[] = [
     "camioneta",
     "motocicleta",
     "motocarguero",
+    "camión",
     "carro",
 ];
 

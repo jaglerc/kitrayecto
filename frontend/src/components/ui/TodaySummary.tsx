@@ -2,14 +2,15 @@ import { useNavigate } from "react-router";
 
 import camionetaIcon from "../../icons/camioneta.png";
 import carroIcon from "../../icons/carro.png";
+import camionIcon from "../../icons/lorry.png";
 import motocargueroIcon from "../../icons/motocarguero.png";
 import motocicletaIcon from "../../icons/motocicleta.png";
 import type { TodayInspection } from "../../services/inspection.service";
 
 interface TodaySummaryProps { inspection: TodayInspection; }
 
-const vehicleIcons = { camioneta: camionetaIcon, carro: carroIcon, motocarguero: motocargueroIcon, motocicleta: motocicletaIcon };
-const vehicleLabels = { camioneta: "Camioneta", carro: "Carro", motocarguero: "Motocarguero", motocicleta: "Motocicleta" };
+const vehicleIcons = { camioneta: camionetaIcon, "camión": camionIcon, carro: carroIcon, motocarguero: motocargueroIcon, motocicleta: motocicletaIcon };
+const vehicleLabels = { camioneta: "Camioneta", "camión": "Camión", carro: "Carro", motocarguero: "Motocarguero", motocicleta: "Motocicleta" };
 const isCritical = (status: string) => status.toLowerCase().includes("cr");
 const getStatusClasses = (status: string) => isCritical(status)
     ? "bg-red-50 text-red-700"

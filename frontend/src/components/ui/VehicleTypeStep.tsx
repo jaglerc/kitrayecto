@@ -2,11 +2,13 @@ import camionetaIcon from "../../icons/camioneta.png";
 import motocicletaIcon from "../../icons/motocicleta.png";
 import motocargueroIcon from "../../icons/motocarguero.png";
 import carroIcon from "../../icons/carro.png";
+import camionIcon from "../../icons/lorry.png";
 
 export type VehicleType =
     | "camioneta"
     | "motocicleta"
     | "motocarguero"
+    | "camión"
     | "carro";
 
 interface VehicleOption {
@@ -37,8 +39,13 @@ const vehicleOptions: VehicleOption[] = [
         icon: motocargueroIcon,
     },
     {
+        type: "camión",
+        label: "Camión",
+        icon: camionIcon,
+    },
+    {
         type: "carro",
-        label: "Carros",
+        label: "Carro",
         icon: carroIcon,
     },
 ];

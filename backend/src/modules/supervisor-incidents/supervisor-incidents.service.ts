@@ -3,8 +3,8 @@ import { SupervisorIncidentsRepository } from "./supervisor-incidents.repository
 import type { SupervisorIncidentList } from "./supervisor-incidents.types.js";
 
 export class SupervisorIncidentsService {
-    static async findMany(page: number, pageSize: number, search: string): Promise<SupervisorIncidentList> {
-        const result = await SupervisorIncidentsRepository.findMany(page, pageSize, search);
+    static async findMany(page: number, pageSize: number, search: string, category: string, status: string): Promise<SupervisorIncidentList> {
+        const result = await SupervisorIncidentsRepository.findMany(page, pageSize, search, category, status);
         result.items = await Promise.all(result.items.map(async (incident) => ({
             ...incident,
             evidences: await Promise.all(incident.evidences.map(async (evidence) => ({

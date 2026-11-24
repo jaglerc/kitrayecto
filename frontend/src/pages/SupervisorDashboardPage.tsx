@@ -130,11 +130,9 @@ export default function SupervisorDashboardPage() {
                         label="Documentos próximos a vencer"
                         value={dashboard.expiringDocuments}
                     />
-                    <SupervisorStatCard
-                        icon={alertIcon}
-                        label="Alertas pendientes"
-                        value={dashboard.pendingAlerts}
-                    />
+                    <button type="button" onClick={() => navigate("/supervisor/incidents?status=abiertos")} className="rounded-2xl text-left focus-visible:outline-amber-500">
+                        <SupervisorStatCard icon={alertIcon} label="Alertas pendientes" value={dashboard.pendingAlerts} />
+                    </button>
                 </section>
 
                 <section className="mt-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">

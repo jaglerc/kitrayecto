@@ -6,4 +6,5 @@ import { SupervisorIncidentsController } from "./supervisor-incidents.controller
 const router = Router();
 router.use(AuthMiddleware, RoleMiddleware("Supervisor", "Administrador"));
 router.get("/", SupervisorIncidentsController.findMany);
+router.post("/:category/:id/follow-up", SupervisorIncidentsController.record);
 export default router;

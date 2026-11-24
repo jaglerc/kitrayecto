@@ -1,12 +1,13 @@
 import camionetaIcon from "../../icons/camioneta.png";
 import carroIcon from "../../icons/carro.png";
+import camionIcon from "../../icons/lorry.png";
 import motocargueroIcon from "../../icons/motocarguero.png";
 import motocicletaIcon from "../../icons/motocicleta.png";
 import userIcon from "../../icons/user.png";
 import type { VehicleType } from "./VehicleTypeStep";
 
 interface TripHeaderSummaryProps { type: VehicleType; plate: string; driverName: string; }
-const vehicles = { camioneta: { label: "Camioneta", icon: camionetaIcon }, carro: { label: "Carro", icon: carroIcon }, motocarguero: { label: "Motocarguero", icon: motocargueroIcon }, motocicleta: { label: "Motocicleta", icon: motocicletaIcon } };
+const vehicles = { camioneta: { label: "Camioneta", icon: camionetaIcon }, "camión": { label: "Camión", icon: camionIcon }, carro: { label: "Carro", icon: carroIcon }, motocarguero: { label: "Motocarguero", icon: motocargueroIcon }, motocicleta: { label: "Motocicleta", icon: motocicletaIcon } };
 
 export default function TripHeaderSummary({ type, plate, driverName }: TripHeaderSummaryProps) {
     const vehicle = vehicles[type];

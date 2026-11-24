@@ -10,6 +10,7 @@ const vehicleTypeMap: Record<VehicleType, DatabaseVehicleType> = {
     camioneta: "Camioneta",
     motocicleta: "Motocicleta",
     motocarguero: "Motocarguero",
+    "camión": "Camión",
     carro: "Carro",
 };
 

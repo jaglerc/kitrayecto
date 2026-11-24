@@ -13,6 +13,7 @@ const vehicleTypeMap: Record<
     camioneta: "Camioneta",
     motocicleta: "Motocicleta",
     motocarguero: "Motocarguero",
+    "camión": "Camión",
     carro: "Carro",
 };
 

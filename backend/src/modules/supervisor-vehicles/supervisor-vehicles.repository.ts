@@ -44,7 +44,7 @@ interface TechnicalRow { id: number; numero_tecnomecanica: string; fecha_vigenci
 
 const apiType = (value: string): SupervisorVehicleSummary["type"] => {
     const normalized = value.toLowerCase();
-    return normalized === "motocicleta" || normalized === "motocarguero" || normalized === "carro"
+    return normalized === "motocicleta" || normalized === "motocarguero" || normalized === "carro" || normalized === "camión"
         ? normalized
         : "camioneta";
 };

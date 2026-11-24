@@ -1,5 +1,6 @@
 import camionetaIcon from "../../icons/camioneta.png";
 import carroIcon from "../../icons/carro.png";
+import camionIcon from "../../icons/lorry.png";
 import motocargueroIcon from "../../icons/motocarguero.png";
 import motocicletaIcon from "../../icons/motocicleta.png";
 
@@ -23,6 +24,7 @@ const vehicleInformation = {
         label: "Motocarguero",
         icon: motocargueroIcon,
     },
+    "camión": { label: "Camión", icon: camionIcon },
     carro: {
         label: "Carro",
         icon: carroIcon,
